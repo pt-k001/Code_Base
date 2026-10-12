@@ -1,0 +1,43 @@
+[paths]
+log_file = ""
+key_file = ""
+
+[ssh]
+connect_timeout = 10
+command_timeout = 30
+max_output_bytes = 1048576
+keepalive_s = 30
+read_chunk = 32768
+poll_sleep_s = 0.05
+reconnect_pause_s = 1
+
+[limits]
+min_interval_s = 1
+max_interval_s = 86400
+default_interval_s = 10
+max_profile_name = 100
+max_username = 128
+max_command = 4096
+max_command_rows = 50
+
+[reconnect]
+max_attempts = 10
+delay_s = 5
+watchdog_ms = 5000
+
+[viewer]
+max_view_lines = 5000
+trim_lines = 1500
+max_block_chars = 200000
+max_memory_blocks = 500
+keep_memory_blocks = 400
+preload_lines = 200
+tail_chunk_bytes = 65536
+poll_ms = 100
+max_events_per_tick = 200
+
+[gui]
+title = "SSH Log"
+window_geometry = "1280x820"
+min_width = 960
+min_height = 620

@@ -1,0 +1,12 @@
+jump_host = ""
+jump_port = 22
+jump_user = ""
+jump_secret = ""
+key_file = ""
+save_secret = false
+target_host = "192.168.99.1"
+target_port = 22
+local_port = 2222
+connect_timeout = 8
+keepalive_interval = 5
+retry_interval = 3

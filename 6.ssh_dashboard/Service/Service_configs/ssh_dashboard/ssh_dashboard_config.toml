@@ -1,0 +1,48 @@
+[paths]
+log_file = ""
+database_file = ""
+chart_file = ""
+
+[storage]
+db_file = "metrics.sqlite"
+state_file = "module_state.json"
+
+[feed]
+progress_lines = 20
+max_gap_samples = 3.0
+
+[refresh]
+default = "1 min"
+queue_poll_ms = 200
+
+[refresh_options]
+"30 sec" = 30
+"1 min" = 60
+"5 min" = 300
+
+[charts]
+default_window = "5 minutes"
+height = 2.6
+group_height = 2.0
+inactive_after_min = 10
+png_dpi = 150
+
+[time_windows]
+"3 minutes" = 3
+"5 minutes" = 5
+"15 minutes" = 15
+"30 minutes" = 30
+"1 hour" = 60
+"6 hours" = 360
+"12 hours" = 720
+"1 day" = 1440
+"3 days" = 4320
+"7 days" = 10080
+
+[gui]
+title = "SSH Dashboard"
+window_geometry = "1100x800"
+min_width = 900
+min_height = 600
+tree_width = 210
+log_height = 6

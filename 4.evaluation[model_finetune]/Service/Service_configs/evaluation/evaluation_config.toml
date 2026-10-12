@@ -1,0 +1,16 @@
+[engine]
+tessdata_dir = "C:/Program Files/Tesseract-OCR/tessdata"
+languages = "rf,custom"
+psm = 7
+fallback_psm = 7
+whitelist = ""
+number_regex = '-?\d+(\.\d+)?'
+
+[gui]
+title = "RF OCR Evaluation"
+window_geometry = "1000x720"
+min_width = 800
+min_height = 560
+poll_ms = 100
+top_confusions = 8
+max_errors_shown = 500

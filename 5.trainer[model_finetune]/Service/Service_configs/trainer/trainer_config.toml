@@ -1,0 +1,77 @@
+[paths]
+tessdata_dir = "C:/Program Files/Tesseract-OCR/tessdata"
+
+[database]
+extensions = [".db", ".sqlite", ".sqlite3"]
+skip_dirs = ["__pycache__", "node_modules", "venv", ".venv"]
+max_scan_depth = 4
+busy_timeout_s = 30.0
+
+[ocr_engine]
+whitelist = "0123456789.-"
+suspicious_confidence = 80.0
+fallback_psm = 7
+
+[image_tuning]
+clahe_tile = 8
+bilateral_sigma = 50.0
+nlmeans_strength = 10.0
+sharpen_sigma = 1.5
+enlarge_interp = "cubic"
+pad_value = 255
+
+[naming]
+gray_mode = "min"
+strip_prefix = "sweep_"
+
+[ocr]
+lang = "custom"
+psm = 7
+stage = "enlarge_otsu"
+regex = "-?\\d+(\\.\\d+)?"
+
+[image_prepare]
+img_crop = 0
+img_invert = false
+img_scale = 1.0
+img_interp = "cubic"
+img_denoise = "none"
+img_denoise_size = 3
+img_contrast = "none"
+img_clahe_clip = 2.0
+img_gamma = 1.0
+img_sharpen = 0.0
+
+[image_threshold]
+img_threshold = "otsu"
+img_thr_fixed = 128
+img_thr_block = 31
+img_thr_c = 10.0
+img_morph = "none"
+img_morph_size = 2
+img_pad = 10
+img_enlarge = 2.0
+
+[dataset]
+db_name = "dataset.db"
+sample_size = 500
+use_whitelist = false
+prefetch = 3
+eval_fraction = 0.1
+seed = 42
+export_subdir = "export"
+train_dir = "train"
+eval_dir = "eval"
+title = "RF OCR Dataset Maker"
+window_geometry = "1000x720"
+dialog_geometry = "1180x800"
+min_width = 800
+min_height = 560
+image_max_width = 900
+image_max_height = 220
+text_font_size = 16
+preview_max_width = 520
+preview_max_height = 150
+preview_debounce_ms = 250
+poll_ms = 60
+shutdown_wait_s = 5.0

@@ -1,0 +1,61 @@
+[input]
+sheet_name = "Sheet1"
+filename_aliases = ["filename", "file_name", "file", "image", "image_name", "name"]
+
+[analysis]
+default_top_n = 3
+sort_ascending = true
+sort_metric = "EVM"
+distribution_bin_width = 1.0
+
+[filters]
+
+[filters.Burst_Power]
+enabled = false
+min = ""
+max = ""
+
+[filters.Common_Pilot_Error]
+enabled = true
+min = ""
+max = -20.0
+
+[filters.EVM]
+enabled = true
+min = ""
+max = -25.0
+
+[filters.Frequency_Error]
+enabled = false
+min = ""
+max = ""
+
+[filters.Peak_to_Average]
+enabled = false
+min = ""
+max = ""
+
+[export]
+folder = ""
+name_stem = ""
+write_reshaped = true
+write_summary = true
+
+[gui]
+title = "Analysis Toolkit"
+window_geometry = "1200x780"
+min_width = 900
+min_height = 600
+poll_ms = 150
+preview_rows = 200
+summary_wrap = 700
+
+[state]
+input_file = "C:/Users/pyk/Downloads/Codes/#Xlsx/Test_012.xlsx"
+input_folder = "C:/Users/pyk/Downloads/Codes/#Xlsx"
+output_folder = "C:/Users/pyk/Downloads/Codes/#Summary_Outputs"
+sort_col = ""
+top_n = "3"
+sort_order = "Lowest first"
+
+[state.filters]

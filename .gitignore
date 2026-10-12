@@ -1,0 +1,12 @@
+#Databases\
+#Ground_Truth\
+#Summary_Outputs\
+#Xlsx\
+*.zip
+*.log
+*.txt
+*.png
+*.db-wal
+*.db-shm
+*.db
+*.xlsx

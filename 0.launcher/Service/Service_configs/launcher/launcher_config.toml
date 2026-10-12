@@ -1,0 +1,19 @@
+[paths]
+apps_dir = ""
+
+[settings]
+appearance = "dark"
+quit_after_open = true
+launch_check_ms = 1200
+max_commits_shown = 300
+
+[gui]
+title = "Launcher"
+window_geometry = "1120x740"
+min_width = 940
+min_height = 620
+
+[descriptions]
+"1.tx_orchestration" = "Orchestrates RF test runs: capture station, SSH and tunnel managers, iperf and the sweep mediator."
+"6.ssh_dashboard" = "Turns SSH Log files into live, zoomable charts for CPU, memory, uptime and Wi-Fi throughput."
+"7.ssh_log" = "Runs commands on devices over SSH on a schedule and records the output to log files."
