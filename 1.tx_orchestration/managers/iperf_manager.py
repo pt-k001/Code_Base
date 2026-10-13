@@ -251,8 +251,12 @@ def test_runner(argv: list):
     log("START cmd=%s" % current_cmd)
 
     try:
+        # stdin=DEVNULL: the Cygwin iperf3.exe otherwise inherits the manager's
+        # console stdin and stalls until a key is pressed in that window.
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT, text=True, bufsize=1)
+                             stderr=subprocess.STDOUT,
+                             stdin=subprocess.DEVNULL,
+                             text=True, bufsize=1)
     except FileNotFoundError:
         finish("ERROR", 0.0, "iperf3 binary not found: %s" % cmd[0])
         return

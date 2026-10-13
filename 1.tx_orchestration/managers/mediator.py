@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 mediator.py - headless orchestrator for channel x txpower sweeps.
 

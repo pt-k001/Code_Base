@@ -1,0 +1,4 @@
+active = "default"
+
+[profiles]
+default = {radio = "radio0", channels = [1, 6, 11], powers = [10, 20], custom_cmd = "", session_prefix = "sweep", confirm_channel_change = true, step_delay = 2, slot_duration = 20}

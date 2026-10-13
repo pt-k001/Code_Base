@@ -10,3 +10,5 @@
 *.db-shm
 *.db
 *.xlsx
+*.pyc
+__init__.cpython-132.pyc
