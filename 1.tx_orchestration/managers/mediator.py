@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 mediator.py - headless orchestrator for channel x txpower sweeps.
 
@@ -6,9 +5,9 @@ Sweeps channel and txpower combinations on the DUT and, for each combination,
 runs an iperf3 test while capturing frames. It drives three managers over the
 core.py JSON TCP protocol:
 
-    ssh_manager      radio SET / SET COMMIT / STATUS
+    ssh_manager      APPLY <radio> <chan> <txpower_dBm> / STATUS / SSHALIVE
     iperf_manager    PERF START / STOP / STATUS / SET
-    capture_manager  SESSION <name> / START / STOP / NUM / STATUS
+    capture_manager  SESSION <name> / START / STOP / NUM / STATUS / DBNAME
 
 All infrastructure (folders, config, log, TCP) lives in core/core.py.
 
@@ -100,6 +99,9 @@ DEFAULTS = {
     "ssh_timeout":         10,
     "perf_timeout":        5,
     "cap_timeout":         5,
+    # ssh_manager APPLY blocks while the channel switches, settles and reads
+    # back; must exceed its chan_switch_deadline + commit_settle + delays
+    "apply_timeout":       60,
     # node-check timeouts (seconds)
     "check_ssh_timeout":     5,
     "check_status_timeout": 15,
@@ -129,6 +131,7 @@ SETTABLE = {
     "perf_retry_wait": "int", "recommit_attempts": "int",
     "session_each_start": "bool",
     "ssh_timeout": "int", "perf_timeout": "int", "cap_timeout": "int",
+    "apply_timeout": "int",
     "check_ssh_timeout": "int", "check_status_timeout": "int",
     "check_cap_timeout": "int", "manual_timeout": "int",
     "perf_cleanup_timeout": "int", "perf_cleanup_poll": "float",
@@ -278,7 +281,6 @@ def perf_cleanup():
 #  LIVE MBPS POLLER  (runs in its own thread while a slot is active)
 # ═══════════════════════════════════════════════════════════════════════════════
 def _mbps_poll_thread():
-    global _mbps_poll_active
     while _mbps_poll_active:
         d = perf_data()
         if d and d.get("manager") == "RUNNING":
@@ -355,46 +357,26 @@ def answer_confirm(ans: str) -> bool:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  RADIO STEP
+#  RADIO STEP  (ssh_manager APPLY: channel + txpower, blocking, verified)
 # ═══════════════════════════════════════════════════════════════════════════════
 def apply_radio(radio, ch, pw) -> bool:
-    prog(step="radio set")
-    r = ssh("SET %s %s %s" % (radio, ch, pw))
+    prog(step="radio apply")
+    # APPLY blocks on the DUT: chan_switch, poll, txpower, settle, readback.
+    r = ssh("APPLY %s %s %s" % (radio, ch, pw), cfg["apply_timeout"])
+    d = r.get("data") if isinstance(r.get("data"), dict) else {}
+
     if not r.get("ok"):
-        return False
-    r = ssh("SET COMMIT")
-    if not r.get("ok"):
+        log("apply failed: %s" % r.get("message"))
         return False
 
-    want = {"channel": str(ch).lower(), "txpower": str(int(pw))}
-    prog(step="radio commit")
-
-    def check():
-        s = ssh("STATUS", 15, quiet=True)
-        d = s.get("data") if isinstance(s.get("data"), dict) else {}
-        if not s.get("ok") or d.get("commit_state") != "IDLE":
-            return None
-        res = d.get("commit_result") or {}
-        if res.get("requested", {}).get(radio) != want:
-            return None
-        return res
-
-    res = core.wait_until(check, cfg["commit_timeout"], 2, stopped)
-    if not res:
-        log("commit result not seen (timeout or stop)")
-        return False
-
-    rssi = (res.get("rssi") or {}).get(radio, {})
-    if "signal" in rssi:
-        rssi_str = "%s dBm (%s)" % (rssi["signal"], rssi.get("ifname"))
-    else:
-        rssi_str = rssi.get("error", "n/a")
-
-    log("commit verified=%s after=%s rssi=%s" %
-        (res.get("verified"), res.get("after"), rssi_str))
-    prog(rssi=rssi_str)
-
-    return bool(res.get("verified"))
+    before = d.get("before") or {}
+    after  = d.get("after") or {}
+    log("apply verified=%s before=ch%s/%s after=ch%s/%s" % (
+        d.get("verified"),
+        before.get("channel"), before.get("txpower"),
+        after.get("channel"), after.get("txpower")))
+    prog(rssi="n/a")
+    return bool(d.get("verified"))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -570,7 +552,7 @@ def _combo_eta_secs(prof) -> float:
     slot_duration = int(prof.get("slot_duration", DEFAULT_PROFILE["slot_duration"]))
     slots_needed  = int(cfg.get("slots_needed", DEFAULTS["slots_needed"]))
     step_delay    = int(prof.get("step_delay",  DEFAULT_PROFILE["step_delay"]))
-    # commit ~10 s overhead + slots + step delay
+    # apply ~10 s overhead + slots + step delay
     return 10.0 + slots_needed * slot_duration + step_delay
 
 
@@ -753,7 +735,7 @@ def parse_profile_value(param: str, raw: list):
             if tk.isdigit():
                 out.append(int(tk))
             elif param == "channels" and tk.lower() == "auto":
-                out.append("auto")
+                return None, "auto is not supported by ssh_manager"
             else:
                 return None, "bad value %r" % tk
         lo, hi = cfg["txpower_min"], cfg["txpower_max"]
@@ -1137,7 +1119,7 @@ def handle_sweep(t: list) -> dict:
             "sweep show combos [profile]",
             "sweep profile list|show|use|new|copy|set",
             "sweep set <param> <value>",
-            "manual sshalive | status | set <radio> <ch> <pwr> | set commit",
+            "manual sshalive | status | apply <radio> <ch> <pwr>",
             "manual perf <PERF command>",
             "manual capture <SESSION|START|STOP|NUM|STATUS>",
         ]})
@@ -1148,7 +1130,7 @@ def handle_sweep(t: list) -> dict:
 def handle_manual(t: list) -> dict:
     if not t:
         return core.send_response(False, "ERROR",
-            "usage: manual <sshalive|status|set ...> | perf <cmd> | capture <cmd>")
+            "usage: manual <sshalive|status|apply ...> | perf <cmd> | capture <cmd>")
     first = t[0].lower()
     if first == "perf":
         target   = "perf"
@@ -1176,8 +1158,12 @@ def handle_manual(t: list) -> dict:
                                   r.get("message", ""),
                                   {"target": target, "command": cmd, "reply": r})
 
-    fn    = perf if target == "perf" else ssh
-    reply = fn(cmd, cfg["manual_timeout"])
+    if target == "perf":
+        reply = perf(cmd, cfg["manual_timeout"])
+    else:
+        # APPLY blocks on the DUT, so give it the longer apply timeout.
+        is_apply = bool(cmd.split()) and cmd.split()[0].upper() == "APPLY"
+        reply = ssh(cmd, cfg["apply_timeout"] if is_apply else cfg["manual_timeout"])
     return core.send_response(reply.get("ok"), reply.get("status", "OK"),
                               reply.get("message", ""),
                               {"target": target, "command": cmd, "reply": reply})
