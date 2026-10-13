@@ -99,5 +99,5 @@ img_pad = 10
 img_enlarge = 2.0
 
 [state]
-input_folder = "C:/Users/pyk/Downloads/Codes/#Databases"
+input_folder = "D:\\Remote_Lan_Share\\Code_Base\\Code_Base\\2.ocr"
 output_folder = "C:\\Users\\pyk\\Downloads\\Codes\\#Xlsx"

@@ -1,0 +1,868 @@
+profile = "default"
+db_name = "LCAC_UCI"
+finished = "DONE"
+at = "2026-10-14 01:15:24"
+
+[result_1]
+index = 1
+radio = "radio1"
+channel = 1
+txpower = 0
+session = "sweep_ch1_pwr0_"
+outcome = "FAILED_RADIO"
+good_slots = 0
+failed_slots = 0
+slots_attempted = 0
+elapsed_secs = 21.2
+
+[result_2]
+index = 2
+radio = "radio1"
+channel = 1
+txpower = 1
+session = "sweep_ch1_pwr1_"
+outcome = "FAILED_RADIO"
+good_slots = 0
+failed_slots = 0
+slots_attempted = 0
+elapsed_secs = 21.5
+
+[result_3]
+index = 3
+radio = "radio1"
+channel = 1
+txpower = 2
+session = "sweep_ch1_pwr2_"
+outcome = "FAILED_RADIO"
+good_slots = 0
+failed_slots = 0
+slots_attempted = 0
+elapsed_secs = 21.6
+
+[result_4]
+index = 4
+radio = "radio1"
+channel = 1
+txpower = 3
+session = "sweep_ch1_pwr3_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 59.5
+
+[result_5]
+index = 5
+radio = "radio1"
+channel = 1
+txpower = 4
+session = "sweep_ch1_pwr4_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_6]
+index = 6
+radio = "radio1"
+channel = 1
+txpower = 5
+session = "sweep_ch1_pwr5_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_7]
+index = 7
+radio = "radio1"
+channel = 1
+txpower = 6
+session = "sweep_ch1_pwr6_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.3
+
+[result_8]
+index = 8
+radio = "radio1"
+channel = 1
+txpower = 7
+session = "sweep_ch1_pwr7_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.4
+
+[result_9]
+index = 9
+radio = "radio1"
+channel = 1
+txpower = 8
+session = "sweep_ch1_pwr8_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.7
+
+[result_10]
+index = 10
+radio = "radio1"
+channel = 1
+txpower = 9
+session = "sweep_ch1_pwr9_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_11]
+index = 11
+radio = "radio1"
+channel = 1
+txpower = 10
+session = "sweep_ch1_pwr10_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_12]
+index = 12
+radio = "radio1"
+channel = 1
+txpower = 11
+session = "sweep_ch1_pwr11_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_13]
+index = 13
+radio = "radio1"
+channel = 1
+txpower = 12
+session = "sweep_ch1_pwr12_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.5
+
+[result_14]
+index = 14
+radio = "radio1"
+channel = 1
+txpower = 13
+session = "sweep_ch1_pwr13_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.4
+
+[result_15]
+index = 15
+radio = "radio1"
+channel = 1
+txpower = 14
+session = "sweep_ch1_pwr14_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.9
+
+[result_16]
+index = 16
+radio = "radio1"
+channel = 1
+txpower = 15
+session = "sweep_ch1_pwr15_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_17]
+index = 17
+radio = "radio1"
+channel = 1
+txpower = 16
+session = "sweep_ch1_pwr16_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.5
+
+[result_18]
+index = 18
+radio = "radio1"
+channel = 1
+txpower = 17
+session = "sweep_ch1_pwr17_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_19]
+index = 19
+radio = "radio1"
+channel = 1
+txpower = 18
+session = "sweep_ch1_pwr18_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.1
+
+[result_20]
+index = 20
+radio = "radio1"
+channel = 1
+txpower = 19
+session = "sweep_ch1_pwr19_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.6
+
+[result_21]
+index = 21
+radio = "radio1"
+channel = 1
+txpower = 20
+session = "sweep_ch1_pwr20_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_22]
+index = 22
+radio = "radio1"
+channel = 1
+txpower = 21
+session = "sweep_ch1_pwr21_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.4
+
+[result_23]
+index = 23
+radio = "radio1"
+channel = 1
+txpower = 22
+session = "sweep_ch1_pwr22_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.3
+
+[result_24]
+index = 24
+radio = "radio1"
+channel = 1
+txpower = 23
+session = "sweep_ch1_pwr23_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_25]
+index = 25
+radio = "radio1"
+channel = 6
+txpower = 0
+session = "sweep_ch6_pwr0_"
+outcome = "FAILED_RADIO"
+good_slots = 0
+failed_slots = 0
+slots_attempted = 0
+elapsed_secs = 21.2
+
+[result_26]
+index = 26
+radio = "radio1"
+channel = 6
+txpower = 1
+session = "sweep_ch6_pwr1_"
+outcome = "FAILED_RADIO"
+good_slots = 0
+failed_slots = 0
+slots_attempted = 0
+elapsed_secs = 21.4
+
+[result_27]
+index = 27
+radio = "radio1"
+channel = 6
+txpower = 2
+session = "sweep_ch6_pwr2_"
+outcome = "FAILED_RADIO"
+good_slots = 0
+failed_slots = 0
+slots_attempted = 0
+elapsed_secs = 21.2
+
+[result_28]
+index = 28
+radio = "radio1"
+channel = 6
+txpower = 3
+session = "sweep_ch6_pwr3_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 110.2
+
+[result_29]
+index = 29
+radio = "radio1"
+channel = 6
+txpower = 4
+session = "sweep_ch6_pwr4_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_30]
+index = 30
+radio = "radio1"
+channel = 6
+txpower = 5
+session = "sweep_ch6_pwr5_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_31]
+index = 31
+radio = "radio1"
+channel = 6
+txpower = 6
+session = "sweep_ch6_pwr6_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.5
+
+[result_32]
+index = 32
+radio = "radio1"
+channel = 6
+txpower = 7
+session = "sweep_ch6_pwr7_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.1
+
+[result_33]
+index = 33
+radio = "radio1"
+channel = 6
+txpower = 8
+session = "sweep_ch6_pwr8_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_34]
+index = 34
+radio = "radio1"
+channel = 6
+txpower = 9
+session = "sweep_ch6_pwr9_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_35]
+index = 35
+radio = "radio1"
+channel = 6
+txpower = 10
+session = "sweep_ch6_pwr10_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_36]
+index = 36
+radio = "radio1"
+channel = 6
+txpower = 11
+session = "sweep_ch6_pwr11_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_37]
+index = 37
+radio = "radio1"
+channel = 6
+txpower = 12
+session = "sweep_ch6_pwr12_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.4
+
+[result_38]
+index = 38
+radio = "radio1"
+channel = 6
+txpower = 13
+session = "sweep_ch6_pwr13_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.1
+
+[result_39]
+index = 39
+radio = "radio1"
+channel = 6
+txpower = 14
+session = "sweep_ch6_pwr14_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.1
+
+[result_40]
+index = 40
+radio = "radio1"
+channel = 6
+txpower = 15
+session = "sweep_ch6_pwr15_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.8
+
+[result_41]
+index = 41
+radio = "radio1"
+channel = 6
+txpower = 16
+session = "sweep_ch6_pwr16_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.1
+
+[result_42]
+index = 42
+radio = "radio1"
+channel = 6
+txpower = 17
+session = "sweep_ch6_pwr17_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_43]
+index = 43
+radio = "radio1"
+channel = 6
+txpower = 18
+session = "sweep_ch6_pwr18_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.1
+
+[result_44]
+index = 44
+radio = "radio1"
+channel = 6
+txpower = 19
+session = "sweep_ch6_pwr19_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.4
+
+[result_45]
+index = 45
+radio = "radio1"
+channel = 6
+txpower = 20
+session = "sweep_ch6_pwr20_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_46]
+index = 46
+radio = "radio1"
+channel = 6
+txpower = 21
+session = "sweep_ch6_pwr21_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_47]
+index = 47
+radio = "radio1"
+channel = 6
+txpower = 22
+session = "sweep_ch6_pwr22_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.5
+
+[result_48]
+index = 48
+radio = "radio1"
+channel = 6
+txpower = 23
+session = "sweep_ch6_pwr23_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_49]
+index = 49
+radio = "radio1"
+channel = 11
+txpower = 0
+session = "sweep_ch11_pwr0_"
+outcome = "FAILED_RADIO"
+good_slots = 0
+failed_slots = 0
+slots_attempted = 0
+elapsed_secs = 21.5
+
+[result_50]
+index = 50
+radio = "radio1"
+channel = 11
+txpower = 1
+session = "sweep_ch11_pwr1_"
+outcome = "FAILED_RADIO"
+good_slots = 0
+failed_slots = 0
+slots_attempted = 0
+elapsed_secs = 21.3
+
+[result_51]
+index = 51
+radio = "radio1"
+channel = 11
+txpower = 2
+session = "sweep_ch11_pwr2_"
+outcome = "FAILED_RADIO"
+good_slots = 0
+failed_slots = 0
+slots_attempted = 0
+elapsed_secs = 21.8
+
+[result_52]
+index = 52
+radio = "radio1"
+channel = 11
+txpower = 3
+session = "sweep_ch11_pwr3_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 74.2
+
+[result_53]
+index = 53
+radio = "radio1"
+channel = 11
+txpower = 4
+session = "sweep_ch11_pwr4_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_54]
+index = 54
+radio = "radio1"
+channel = 11
+txpower = 5
+session = "sweep_ch11_pwr5_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_55]
+index = 55
+radio = "radio1"
+channel = 11
+txpower = 6
+session = "sweep_ch11_pwr6_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 51.2
+
+[result_56]
+index = 56
+radio = "radio1"
+channel = 11
+txpower = 7
+session = "sweep_ch11_pwr7_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.6
+
+[result_57]
+index = 57
+radio = "radio1"
+channel = 11
+txpower = 8
+session = "sweep_ch11_pwr8_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_58]
+index = 58
+radio = "radio1"
+channel = 11
+txpower = 9
+session = "sweep_ch11_pwr9_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_59]
+index = 59
+radio = "radio1"
+channel = 11
+txpower = 10
+session = "sweep_ch11_pwr10_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_60]
+index = 60
+radio = "radio1"
+channel = 11
+txpower = 11
+session = "sweep_ch11_pwr11_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.8
+
+[result_61]
+index = 61
+radio = "radio1"
+channel = 11
+txpower = 12
+session = "sweep_ch11_pwr12_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_62]
+index = 62
+radio = "radio1"
+channel = 11
+txpower = 13
+session = "sweep_ch11_pwr13_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.3
+
+[result_63]
+index = 63
+radio = "radio1"
+channel = 11
+txpower = 14
+session = "sweep_ch11_pwr14_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.1
+
+[result_64]
+index = 64
+radio = "radio1"
+channel = 11
+txpower = 15
+session = "sweep_ch11_pwr15_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.3
+
+[result_65]
+index = 65
+radio = "radio1"
+channel = 11
+txpower = 16
+session = "sweep_ch11_pwr16_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.9
+
+[result_66]
+index = 66
+radio = "radio1"
+channel = 11
+txpower = 17
+session = "sweep_ch11_pwr17_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_67]
+index = 67
+radio = "radio1"
+channel = 11
+txpower = 18
+session = "sweep_ch11_pwr18_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_68]
+index = 68
+radio = "radio1"
+channel = 11
+txpower = 19
+session = "sweep_ch11_pwr19_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.3
+
+[result_69]
+index = 69
+radio = "radio1"
+channel = 11
+txpower = 20
+session = "sweep_ch11_pwr20_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.5
+
+[result_70]
+index = 70
+radio = "radio1"
+channel = 11
+txpower = 21
+session = "sweep_ch11_pwr21_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.3
+
+[result_71]
+index = 71
+radio = "radio1"
+channel = 11
+txpower = 22
+session = "sweep_ch11_pwr22_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_72]
+index = 72
+radio = "radio1"
+channel = 11
+txpower = 23
+session = "sweep_ch11_pwr23_"
+outcome = "FAILED_RADIO"
+good_slots = 0
+failed_slots = 0
+slots_attempted = 0
+elapsed_secs = 21.2
