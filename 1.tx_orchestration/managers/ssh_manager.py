@@ -119,16 +119,16 @@ _phy_cache = {}                # ifname -> "phyN"
 # ═══════════════════════════════════════════════════════════════════════════════
 #  HELPERS
 # ═══════════════════════════════════════════════════════════════════════════════
-def log(text: str, console: str = None):
+def helper_log(text: str, console: str = None):
     core.logmsg(APP, text, console=console)
 
 
 # --------------------------------------------------------------- ssh link ---
-def set_alive(v):
+def helper_set_alive(v):
     global is_ssh_alive
     if v != is_ssh_alive:
         is_ssh_alive = v
-        log("SSH ALIVE" if v else "SSH DEAD")
+        helper_log("SSH ALIVE" if v else "SSH DEAD")
 
 
 def connect():
@@ -139,25 +139,25 @@ def connect():
               timeout=cfg["connect_timeout"], look_for_keys=False, allow_agent=False)
     with lock:
         client = c
-    set_alive(True)
+    helper_set_alive(True)
 
 
-def _exec(cmd, timeout):
+def _helper_exec(cmd, timeout):
     _, o, e = client.exec_command(cmd, timeout=timeout)
     out, err = o.read().decode(), e.read().decode()
     return o.channel.recv_exit_status(), out, err
 
 
-def run(cmd, timeout=None):
+def helper_run(cmd, timeout=None):
     if timeout is None:
         timeout = cfg["cmd_timeout"]
     with lock:
         if not is_ssh_alive:
             raise ConnectionError("ssh down")
         try:
-            return _exec(cmd, timeout)
+            return _helper_exec(cmd, timeout)
         except Exception as ex:
-            set_alive(False)
+            helper_set_alive(False)
             raise ConnectionError(str(ex))
 
 
@@ -167,12 +167,12 @@ def heartbeat():
         if not lock.acquire(timeout=cfg["heartbeat_lock_timeout"]):
             continue   # a command is busy
         try:
-            ok = _exec("true", cfg["connect_timeout"])[0] == 0
+            ok = _helper_exec("true", cfg["connect_timeout"])[0] == 0
         except Exception:
             ok = False
         finally:
             lock.release()
-        set_alive(ok)
+        helper_set_alive(ok)
         if not ok:
             try:
                 connect()
@@ -188,7 +188,7 @@ _RE_CHAN  = re.compile(
 _RE_TX    = re.compile(r"^\s*txpower\s+(-?[\d.]+)\s*dBm", re.M)
 
 
-def parse_iw_info(text: str, ifname: str) -> dict:
+def helper_parse_iw_info(text: str, ifname: str) -> dict:
     snap = {"ifname": ifname, "phy": None, "type": None, "channel": None,
             "freq": None, "width": None, "txpower": None, "ok": False}
     m = _RE_WIPHY.search(text)
@@ -210,33 +210,33 @@ def parse_iw_info(text: str, ifname: str) -> dict:
     return snap
 
 
-def read_iface(ifname: str) -> dict:
-    rc, out, err = run("iw dev %s info" % ifname)
+def helper_read_iface(ifname: str) -> dict:
+    rc, out, err = helper_run("iw dev %s info" % ifname)
     if rc != 0:
         return {"ifname": ifname, "ok": False,
                 "error": (err.strip() or out.strip() or "iw rc=%d" % rc)}
-    snap = parse_iw_info(out, ifname)
+    snap = helper_parse_iw_info(out, ifname)
     if snap["phy"]:
         _phy_cache[ifname] = snap["phy"]
     return snap
 
 
-def band_of(freq):
+def helper_band_of(freq):
     if freq is None:
         return "?"
     return "2.4GHz" if freq < 3000 else "5GHz"
 
 
-def snap_public(s: dict) -> dict:
+def helper_snap_public(s: dict) -> dict:
     out = {k: s.get(k) for k in ("ifname", "phy", "channel", "freq",
                                   "width", "txpower", "ok")}
-    out["band"] = band_of(s.get("freq"))
+    out["band"] = helper_band_of(s.get("freq"))
     if s.get("error"):
         out["error"] = s["error"]
     return out
 
 
-def chan_to_freq(ch: int, freq_now):
+def helper_chan_to_freq(ch: int, freq_now):
     if freq_now is None:
         return None, "current frequency unknown, cannot pick band"
     if freq_now < 3000:                      # 2.4 GHz
@@ -250,11 +250,11 @@ def chan_to_freq(ch: int, freq_now):
     return None, "channel %d invalid for 5 GHz" % ch
 
 
-def radio_iface(radio: str):
+def helper_radio_iface(radio: str):
     return (cfg.get("%s_iface" % radio) or "").strip() or None
 
 
-def configured_radios() -> dict:
+def helper_configured_radios() -> dict:
     out = {}
     for k, v in cfg.items():
         m = re.fullmatch(r"(radio\d+)_iface", k)
@@ -265,10 +265,10 @@ def configured_radios() -> dict:
 
 # ------------------------------------------------------------------ apply ---
 def apply_radio(radio: str, ch_s: str, tx_s: str):
-    ifname = radio_iface(radio)
+    ifname = helper_radio_iface(radio)
     if not ifname:
         return None, "unknown radio %r (configured: %s)" % (
-            radio, ", ".join(configured_radios()) or "none")
+            radio, ", ".join(helper_configured_radios()) or "none")
 
     lo, hi = cfg["txpower_min"], cfg["txpower_max"]
     if not ch_s.isdigit():
@@ -277,7 +277,7 @@ def apply_radio(radio: str, ch_s: str, tx_s: str):
         return None, "txpower must be a whole dBm value %d-%d" % (lo, hi)
     ch, tx = int(ch_s), int(tx_s)
 
-    before = read_iface(ifname)
+    before = helper_read_iface(ifname)
     if not before["ok"]:
         return None, "cannot read %s: %s" % (ifname, before.get("error", "no channel/txpower in iw output"))
     if before.get("type") not in (None, "AP"):
@@ -286,20 +286,20 @@ def apply_radio(radio: str, ch_s: str, tx_s: str):
     if not phy:
         return None, "cannot determine phy of %s" % ifname
 
-    log("apply %s(%s/%s) %s -> ch=%d tx=%d dBm" % (
+    helper_log("apply %s(%s/%s) %s -> ch=%d tx=%d dBm" % (
         radio, ifname, phy, "ch=%s tx=%s" % (before["channel"], before["txpower"]), ch, tx))
 
     # ── channel ─────────────────────────────────────────────────────────────
     if before["channel"] != ch:
-        freq, err = chan_to_freq(ch, before["freq"])
+        freq, err = helper_chan_to_freq(ch, before["freq"])
         if err:
             return None, err
         extra = (" " + cfg["chan_switch_extra"].strip()) if cfg["chan_switch_extra"].strip() else ""
         hcli  = (cfg["hostapd_cli_extra"].strip() + " ") if cfg["hostapd_cli_extra"].strip() else ""
         cmd = "hostapd_cli %s-i %s chan_switch %d %d%s" % (
             hcli, ifname, int(cfg["csa_count"]), freq, extra)
-        rc, out, e = run(cmd)
-        log("chan_switch: rc=%s out=%r err=%r" % (rc, out.strip(), e.strip()))
+        rc, out, e = helper_run(cmd)
+        helper_log("chan_switch: rc=%s out=%r err=%r" % (rc, out.strip(), e.strip()))
         if rc != 0 or "OK" not in out:
             return None, "chan_switch failed: %s" % (out.strip() or e.strip() or "rc=%d" % rc)
 
@@ -308,7 +308,7 @@ def apply_radio(radio: str, ch_s: str, tx_s: str):
         seen = False
         while time.time() < deadline:
             time.sleep(float(cfg["chan_poll_interval"]))
-            s = read_iface(ifname)
+            s = helper_read_iface(ifname)
             if s["ok"] and s["channel"] == ch:
                 seen = True
                 break
@@ -317,34 +317,34 @@ def apply_radio(radio: str, ch_s: str, tx_s: str):
                 ch, cfg["chan_switch_deadline"])
         time.sleep(float(cfg["delay_after_chan"]))
     else:
-        log("channel already %d - skipping chan_switch" % ch)
+        helper_log("channel already %d - skipping chan_switch" % ch)
 
     # ── txpower (after channel: some drivers reset it on a channel change) ──
-    cur = read_iface(ifname)
+    cur = helper_read_iface(ifname)
     if not cur["ok"] or cur["txpower"] is None or \
             abs(cur["txpower"] - tx) > float(cfg["txpower_tolerance"]):
-        rc, out, e = run("iw phy %s set txpower limit %d" % (phy, tx * 100))
-        log("set txpower: rc=%s err=%r" % (rc, e.strip()))
+        rc, out, e = helper_run("iw phy %s set txpower limit %d" % (phy, tx * 100))
+        helper_log("set txpower: rc=%s err=%r" % (rc, e.strip()))
         if rc != 0:
             return None, "iw set txpower failed: %s" % (e.strip() or out.strip() or "rc=%d" % rc)
         time.sleep(float(cfg["delay_after_tx"]))
     else:
-        log("txpower already %s dBm - skipping" % cur["txpower"])
+        helper_log("txpower already %s dBm - skipping" % cur["txpower"])
 
     # ── settle + readback ───────────────────────────────────────────────────
     time.sleep(float(cfg["commit_settle"]))
-    after = read_iface(ifname)
+    after = helper_read_iface(ifname)
 
     verified = bool(after["ok"] and after["channel"] == ch and
                     abs(after["txpower"] - tx) <= float(cfg["txpower_tolerance"]))
-    log("verify: %s  after ch=%s tx=%s" % (
+    helper_log("verify: %s  after ch=%s tx=%s" % (
         "OK" if verified else "FAILED", after.get("channel"), after.get("txpower")))
 
     return {
         "radio": radio, "iface": ifname,
         "requested": {"channel": ch, "txpower": tx},
-        "before": snap_public(before),
-        "after": snap_public(after),
+        "before": helper_snap_public(before),
+        "after": helper_snap_public(after),
         "verified": verified,
     }, None
 
@@ -370,8 +370,8 @@ def handle_command(line):
 
             if cmd == "STATUS":
                 radios = {}
-                for r, ifname in configured_radios().items():
-                    radios[r] = snap_public(read_iface(ifname))
+                for r, ifname in helper_configured_radios().items():
+                    radios[r] = helper_snap_public(helper_read_iface(ifname))
                 all_ok = bool(radios) and all(v["ok"] for v in radios.values())
                 return core.send_response(all_ok, "OK" if all_ok else "ERROR",
                     "status read" if all_ok else "some radios unreadable",
@@ -382,7 +382,7 @@ def handle_command(line):
                     "usage: APPLY <radio> <chan> <txpower_dBm>")
             data, err = apply_radio(t[1].lower(), t[2], t[3])
             if err:
-                log("APPLY error: %s" % err)
+                helper_log("APPLY error: %s" % err)
                 return core.send_response(False, "ERROR", err)
             return core.send_response(True, "VERIFIED" if data["verified"] else "UNVERIFIED",
                                       "applied", data)
@@ -400,12 +400,12 @@ def main():
     cfg = core.load_config(APP, DEFAULTS)
     core.start_run_log(APP)
 
-    log("=== SSH start Version=%s ===" % APP_version)
+    helper_log("=== SSH start Version=%s ===" % APP_version)
 
     try:
         connect()
     except Exception as e:
-        log("initial connect failed: %s (heartbeat will retry)" % e)
+        helper_log("initial connect failed: %s (heartbeat will retry)" % e)
 
     threading.Thread(target=heartbeat, daemon=True).start()
     threading.Thread(
@@ -424,20 +424,20 @@ def main():
         if line.lower() in ("exit", "quit"):
             break
         if line.lower() == "help":
-            log("commands: SSHALIVE | STATUS | APPLY <radio> <chan> <txpower_dBm> | exit")
+            helper_log("commands: SSHALIVE | STATUS | APPLY <radio> <chan> <txpower_dBm> | exit")
             continue
 
-        log("> " + line)
+        helper_log("> " + line)
         try:
             result = handle_command(line)
         except Exception as e:
             result = core.send_response(False, "ERROR", "internal error: %s" % e)
         # File: raw JSON (wire-level record). Console: human-readable table.
-        log("< " + json.dumps(result),
+        helper_log("< " + json.dumps(result),
             console="<\n" + core.humanize_table(result))
 
     running = False
-    log("=== session end ===")
+    helper_log("=== session end ===")
 
 
 if __name__ == "__main__":

@@ -102,26 +102,26 @@ _STOPPED_TEXT = ["unable to connect", "connection refused", "timeout",
 # ══════════════════════════════════════════════════════════════════════════════
 #  HELPERS
 # ══════════════════════════════════════════════════════════════════════════════
-def log(text: str, console: str = None):
+def helper_log(text: str, console: str = None):
     try:
         core.logmsg(APP, text, console=console)
     except Exception:
         pass            # logging must never take the manager down
 
 
-def _derive_path() -> str:
+def _helper_derive_path() -> str:
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base, "bin", _BINARY_NAME)
 
 
-def _mbps(bps) -> float:
+def _helper_mbps(bps) -> float:
     try:
         return float(bps) / 1_000_000.0
     except (TypeError, ValueError):
         return 0.0
 
 
-def classify_failure(text: str) -> str:
+def helper_classify_failure(text: str) -> str:
     low = text.lower()
     if any(w in low for w in _BUSY_TEXT):
         return "SERVER_BUSY"
@@ -130,7 +130,7 @@ def classify_failure(text: str) -> str:
     return "ERROR"
 
 
-def build_argv(raw: str, iperf3_path: str) -> list:
+def helper_build_argv(raw: str, iperf3_path: str) -> list:
     tokens = shlex.split(raw)
     if tokens:
         head = tokens[0].lower()
@@ -141,7 +141,7 @@ def build_argv(raw: str, iperf3_path: str) -> list:
     return [iperf3_path] + tokens
 
 
-def _validate_cmd(raw: str) -> str:
+def _helper_validate_cmd(raw: str) -> str:
     raw = raw.strip()
     if not raw:
         raise ValueError("empty command")
@@ -152,14 +152,14 @@ def _validate_cmd(raw: str) -> str:
     return raw
 
 
-def _humanize(result: dict) -> str:
+def _helper_humanize(result: dict) -> str:
     try:
         return "<\n" + core.humanize_table(result)
     except Exception:
         return "< " + json.dumps(result, default=str)
 
 
-def finish(state: str, mbps: float, message: str):
+def helper_finish(state: str, mbps: float, message: str):
     global manager_state, last_result, proc, stop_requested, current_mbps
     with state_lock:
         last_result    = {"state": state, "mbps": round(mbps, 3),
@@ -168,14 +168,14 @@ def finish(state: str, mbps: float, message: str):
         proc           = None
         stop_requested = False
         current_mbps   = 0.0
-    log("RESULT %s mbps=%.2f %s" % (state, mbps, message))
+    helper_log("RESULT %s mbps=%.2f %s" % (state, mbps, message))
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  RUNNER  (iperf3 3.21 --json-stream)
 #    events: start | interval | end | error
 # ══════════════════════════════════════════════════════════════════════════════
-def _terminate(p):
+def _helper_terminate(p):
     try:
         if p.poll() is None:
             p.terminate()
@@ -183,13 +183,13 @@ def _terminate(p):
         pass
 
 
-def _wait_bounded(p):
+def _helper_wait_bounded(p):
     try:
         p.wait(timeout=_WAIT_TIMEOUT_S)
         return
     except subprocess.TimeoutExpired:
         pass
-    log("iperf3 did not exit within %ss — killing" % _WAIT_TIMEOUT_S)
+    helper_log("iperf3 did not exit within %ss — killing" % _WAIT_TIMEOUT_S)
     try:
         p.kill()
     except OSError:
@@ -197,26 +197,26 @@ def _wait_bounded(p):
     try:
         p.wait(timeout=_KILL_TIMEOUT_S)
     except subprocess.TimeoutExpired:
-        log("iperf3 still alive after kill(); giving up (possible orphan)")
+        helper_log("iperf3 still alive after kill(); giving up (possible orphan)")
 
 
-def _log_start(data):
+def _helper_log_start(data):
     conn = data.get("test_start", {})
     conns = data.get("connected") or [{}]
     info = conns[0] if isinstance(conns[0], dict) else {}
-    log("START  %s -> %s:%s  proto=%s streams=%s dur=%ss" % (
+    helper_log("START  %s -> %s:%s  proto=%s streams=%s dur=%ss" % (
         info.get("local_host", "?"), info.get("remote_host", "?"),
         info.get("remote_port", "?"), conn.get("protocol", "TCP"),
         conn.get("num_streams", 1), conn.get("duration", 0)))
 
 
-def _log_end(data, udp, reverse) -> float:
+def _helper_log_end(data, udp, reverse) -> float:
     sent = data.get("sum_sent", {}) or {}
     recv = data.get("sum_received", {}) or {}
     cpu  = data.get("cpu_utilization_percent", {}) or {}
 
-    sent_m = _mbps(sent.get("bits_per_second", 0.0))
-    recv_m = _mbps(recv.get("bits_per_second", 0.0))
+    sent_m = _helper_mbps(sent.get("bits_per_second", 0.0))
+    recv_m = _helper_mbps(recv.get("bits_per_second", 0.0))
     lines = [
         "─" * 54,
         "  RESULT",
@@ -229,10 +229,10 @@ def _log_end(data, udp, reverse) -> float:
         lines.append("  CPU      host=%.1f%%  remote=%.1f%%" % (
             cpu.get("host_total", 0), cpu.get("remote_total", 0)))
     lines.append("─" * 54)
-    log("\n".join(lines))
+    helper_log("\n".join(lines))
 
     if udp:
-        return _mbps((data.get("sum", {}) or {}).get("bits_per_second", 0.0))
+        return _helper_mbps((data.get("sum", {}) or {}).get("bits_per_second", 0.0))
     return recv_m if reverse else sent_m
 
 
@@ -248,23 +248,27 @@ def test_runner(argv: list):
     with state_lock:
         current_cmd  = " ".join(cmd)
         current_mbps = 0.0
-    log("START cmd=%s" % current_cmd)
+    helper_log("START cmd=%s" % current_cmd)
 
     try:
+        # stdin=DEVNULL: the Cygwin iperf3.exe otherwise inherits the manager's
+        # console stdin and stalls until a key is pressed in that window.
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT, text=True, bufsize=1)
+                             stderr=subprocess.STDOUT,
+                             stdin=subprocess.DEVNULL,
+                             text=True, bufsize=1)
     except FileNotFoundError:
-        finish("ERROR", 0.0, "iperf3 binary not found: %s" % cmd[0])
+        helper_finish("ERROR", 0.0, "iperf3 binary not found: %s" % cmd[0])
         return
     except OSError as e:
-        finish("ERROR", 0.0, "could not start iperf3: %s" % e)
+        helper_finish("ERROR", 0.0, "could not start iperf3: %s" % e)
         return
 
     with state_lock:
         proc = p
         stop_already = stop_requested
     if stop_already:                     # STOP arrived before proc was set
-        _terminate(p)
+        _helper_terminate(p)
 
     st = {"final": 0.0, "end_seen": False, "n": 0, "diag": []}
 
@@ -276,7 +280,7 @@ def test_runner(argv: list):
         try:
             obj = json.loads(line)
         except (ValueError, TypeError):
-            log("unparseable line: %s" % line[:200])
+            helper_log("unparseable line: %s" % line[:200])
             if len(st["diag"]) < 50:
                 st["diag"].append(line)
             return None
@@ -289,17 +293,17 @@ def test_runner(argv: list):
             return None
 
         if event == "start":
-            _log_start(data)
+            _helper_log_start(data)
         elif event == "interval":
             st["n"] += 1
             s = data.get("sum", {}) or {}
-            m = _mbps(s.get("bits_per_second", 0.0))
-            log("  [%2d]  %4.2f-%4.2f s   %8.2f Mbps" % (
+            m = _helper_mbps(s.get("bits_per_second", 0.0))
+            helper_log("  [%2d]  %4.2f-%4.2f s   %8.2f Mbps" % (
                 st["n"], s.get("start", 0.0), s.get("end", 0.0), m))
             with state_lock:
                 current_mbps = m
         elif event == "end":
-            st["final"]    = _log_end(data, udp, reverse)
+            st["final"]    = _helper_log_end(data, udp, reverse)
             st["end_seen"] = True
         elif event == "error":
             return str(data.get("error", data)) if isinstance(data, dict) \
@@ -307,8 +311,8 @@ def test_runner(argv: list):
         return None
 
     def bail(err_msg):
-        _wait_bounded(p)
-        finish(classify_failure(err_msg), 0.0, err_msg[:300])
+        _helper_wait_bounded(p)
+        helper_finish(helper_classify_failure(err_msg), 0.0, err_msg[:300])
 
     stopped_by_us = False
     while True:
@@ -322,18 +326,18 @@ def test_runner(argv: list):
         try:
             err = process_line(raw)
         except Exception as e:
-            log("error processing line: %r (%s)" % (e, raw.strip()[:200]))
-            _terminate(p)
-            _wait_bounded(p)
-            finish("ERROR", 0.0, "runner error: %s" % e)
+            helper_log("error processing line: %r (%s)" % (e, raw.strip()[:200]))
+            _helper_terminate(p)
+            _helper_wait_bounded(p)
+            helper_finish("ERROR", 0.0, "runner error: %s" % e)
             return
         if err is not None:
             bail(err)
             return
 
     if stopped_by_us:
-        _terminate(p)
-    _wait_bounded(p)
+        _helper_terminate(p)
+    _helper_wait_bounded(p)
 
     try:
         leftover = p.stdout.read()
@@ -344,8 +348,8 @@ def test_runner(argv: list):
             try:
                 err = process_line(line)
             except Exception as e:
-                log("error processing leftover: %r" % e)
-                finish("ERROR", 0.0, "runner error: %s" % e)
+                helper_log("error processing leftover: %r" % e)
+                helper_finish("ERROR", 0.0, "runner error: %s" % e)
                 return
             if err is not None:
                 bail(err)
@@ -355,31 +359,31 @@ def test_runner(argv: list):
         was_stopping = stop_requested
 
     if was_stopping:
-        finish("STOPPED", 0.0, "test stopped by orchestrator")
+        helper_finish("STOPPED", 0.0, "test stopped by orchestrator")
     elif not st["end_seen"]:
         msg = (" ".join(st["diag"]) or "no end event received from iperf3")[:300]
-        finish(classify_failure(msg), 0.0, msg)
+        helper_finish(helper_classify_failure(msg), 0.0, msg)
     elif st["final"] <= 0:
-        finish("ZERO_TRAFFIC", 0.0, "no traffic reported")
+        helper_finish("ZERO_TRAFFIC", 0.0, "no traffic reported")
     else:
-        finish("SUCCESS", st["final"], "")
+        helper_finish("SUCCESS", st["final"], "")
 
 
 def _run_test(argv):
     try:
         test_runner(argv)
     except Exception as e:
-        log("runner crashed: %r" % e)
+        helper_log("runner crashed: %r" % e)
         with state_lock:
             p = proc
         if p is not None:
-            _terminate(p)
-        finish("ERROR", 0.0, "runner crashed: %s" % e)
+            _helper_terminate(p)
+        helper_finish("ERROR", 0.0, "runner crashed: %s" % e)
     else:
         with state_lock:
             stuck = manager_state != "IDLE"
         if stuck:
-            finish("ERROR", 0.0, "runner exited without result")
+            helper_finish("ERROR", 0.0, "runner exited without result")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -398,7 +402,7 @@ def _load_cfg():
         if not 1 <= port <= 65535:
             raise ValueError
     except (TypeError, ValueError):
-        log("invalid tcp_port %r, using default" % loaded["tcp_port"])
+        helper_log("invalid tcp_port %r, using default" % loaded["tcp_port"])
         port = DEFAULTS["tcp_port"]
     if loaded["tcp_port"] != port:
         loaded["tcp_port"] = port
@@ -406,7 +410,7 @@ def _load_cfg():
 
     p = loaded.get("iperf3_path") or ""
     if not p or not os.path.isfile(p):
-        derived = _derive_path()
+        derived = _helper_derive_path()
         if p != derived:
             loaded["iperf3_path"] = derived
             changed = True
@@ -458,7 +462,7 @@ def _handle(line: str) -> dict:
             return core.send_response(False, "ERROR",
                 "iperf3 binary not found: %s" % path_val)
         try:
-            argv = build_argv(cmd_val, path_val)
+            argv = helper_build_argv(cmd_val, path_val)
         except ValueError as e:
             return core.send_response(False, "ERROR",
                 "stored cmd could not be parsed: %s" % e)
@@ -490,8 +494,8 @@ def _handle(line: str) -> dict:
             manager_state  = "STOPPING"
             active = proc
         if active is not None:
-            _terminate(active)               # runner escalates to kill
-        log("STOP requested")
+            _helper_terminate(active)               # runner escalates to kill
+        helper_log("STOP requested")
         return core.send_response(True, "STOPPING", "stop requested")
 
     # ── SET ───────────────────────────────────────────────────────────────────
@@ -519,10 +523,10 @@ def _handle(line: str) -> dict:
             return core.send_response(True, "OK", "cmd cleared", {"cmd": ""})
 
         try:
-            rest = _validate_cmd(rest)
+            rest = _helper_validate_cmd(rest)
             with cfg_lock:
                 path_val = cfg["iperf3_path"]
-            build_argv(rest, path_val)        # parse check
+            helper_build_argv(rest, path_val)        # parse check
         except ValueError as e:
             return core.send_response(False, "ERROR",
                 "could not parse cmd (check quoting): %s" % e)
@@ -541,7 +545,7 @@ def handle_command(line: str) -> dict:
             return core.send_response(False, "ERROR", "invalid input")
         return _handle(line[:MAX_CMD_LEN + 64])
     except Exception as e:
-        log("handler error: %r" % e)
+        helper_log("handler error: %r" % e)
         return core.send_response(False, "ERROR", "internal error: %s" % e)
 
 
@@ -555,10 +559,10 @@ def main():
     core.start_run_log(APP)
     cfg = _load_cfg()
 
-    log("=== Iperf start Version=%s  path=%s  ===" % ( APP_Version, cfg["iperf3_path"]))
+    helper_log("=== Iperf start Version=%s  path=%s  ===" % ( APP_Version, cfg["iperf3_path"]))
     if not os.path.isfile(cfg["iperf3_path"]):
         msg = "WARNING: iperf3 binary not found at %s" % cfg["iperf3_path"]
-        log(msg, console=msg)
+        helper_log(msg, console=msg)
 
     threading.Thread(
         target=core.run_tcp_server,
@@ -589,18 +593,18 @@ def main():
                       "exit")
                 continue
 
-            log("> " + line)
+            helper_log("> " + line)
             result = handle_command(line)
-            log("< " + json.dumps(result, default=str),
-                console=_humanize(result))
+            helper_log("< " + json.dumps(result, default=str),
+                console=_helper_humanize(result))
     finally:
         running = False
         with state_lock:
             stop_requested = True
             active = proc
         if active is not None:
-            _terminate(active)
-        log("=== session end ===")
+            _helper_terminate(active)
+        helper_log("=== session end ===")
 
 
 if __name__ == "__main__":

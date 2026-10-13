@@ -1,0 +1,4 @@
+iperf3_path = "c:\\Users\\pyk\\Documents\\GitHub\\Code_Base\\1.tx_orchestration\\bin\\iperf3.exe"
+cmd = "-c 127.0.0.1 -b 1M"
+tcp_host = "0.0.0.0"
+tcp_port = 9001
