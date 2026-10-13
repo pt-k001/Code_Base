@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 mediator.py - headless orchestrator for channel x txpower sweeps.
 
@@ -178,19 +177,19 @@ _mbps_poll_active   = False
 # ═══════════════════════════════════════════════════════════════════════════════
 #  HELPERS
 # ═══════════════════════════════════════════════════════════════════════════════
-def log(text: str, console: str = None):
+def helper_log(text: str, console: str = None):
     core.logmsg(APP, text, console=console)
 
 
-def stopped() -> bool:
+def helper_stopped() -> bool:
     return stop_req
 
 
-def is_paused() -> bool:
+def helper_is_paused() -> bool:
     return paused
 
 
-def set_state(s: str):
+def helper_set_state(s: str):
     global sweep_state
     with state_lock:
         if stop_req and s != "IDLE":
@@ -198,16 +197,16 @@ def set_state(s: str):
         sweep_state = s
 
 
-def prog(**kw):
+def helper_prog(**kw):
     with state_lock:
         progress.update(kw)
 
 
-def now_str() -> str:
+def helper_now_str() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
-def _fmt_eta(seconds: float) -> str:
+def _helper_fmt_eta(seconds: float) -> str:
     seconds = max(0, int(seconds))
     h, rem = divmod(seconds, 3600)
     m, s   = divmod(rem, 60)
@@ -221,69 +220,69 @@ def _fmt_eta(seconds: float) -> str:
 # ═══════════════════════════════════════════════════════════════════════════════
 #  PEER COMMUNICATION
 # ═══════════════════════════════════════════════════════════════════════════════
-def ssh(line, timeout=None, quiet=False):
+def helper_ssh(line, timeout=None, quiet=False):
     if timeout is None:
         timeout = cfg["ssh_timeout"]
     if not quiet:
-        log("ssh  > " + line)
+        helper_log("ssh  > " + line)
     r = core.tcp_command(cfg["ssh_host"], cfg["ssh_port"], line, timeout)
     if not quiet:
-        log("ssh  < ok=%s %s %s" % (r.get("ok"), r.get("status"), r.get("message")))
+        helper_log("ssh  < ok=%s %s %s" % (r.get("ok"), r.get("status"), r.get("message")))
     return r
 
 
-def perf(line, timeout=None, quiet=False):
+def helper_perf(line, timeout=None, quiet=False):
     if timeout is None:
         timeout = cfg["perf_timeout"]
     if not quiet:
-        log("perf > " + line)
+        helper_log("perf > " + line)
     r = core.tcp_command(cfg["perf_host"], cfg["perf_port"], line, timeout)
     if not quiet:
-        log("perf < ok=%s %s %s" % (r.get("ok"), r.get("status"), r.get("message")))
+        helper_log("perf < ok=%s %s %s" % (r.get("ok"), r.get("status"), r.get("message")))
     return r
 
 
-def cap(line, timeout=None, quiet=False):
+def helper_cap(line, timeout=None, quiet=False):
     if timeout is None:
         timeout = cfg["cap_timeout"]
     if not quiet:
-        log("cap  > " + line)
+        helper_log("cap  > " + line)
     r = core.tcp_command(cfg["capture_host"], cfg["capture_port"], line, timeout)
     if not quiet:
-        log("cap  < ok=%s %s %s" % (r.get("ok"), r.get("status"), r.get("message")))
+        helper_log("cap  < ok=%s %s %s" % (r.get("ok"), r.get("status"), r.get("message")))
     return r
 
 
-def cap_ok(r):
+def helper_cap_ok(r):
     return bool(r.get("ok"))
 
 
-def perf_data():
-    r = perf("PERF STATUS", cfg["perf_timeout"], quiet=True)
+def helper_perf_data():
+    r = helper_perf("PERF STATUS", cfg["perf_timeout"], quiet=True)
     d = r.get("data")
     if r.get("ok") and isinstance(d, dict):
         return d
     return None
 
 
-def perf_cleanup():
-    d = perf_data()
+def helper_perf_cleanup():
+    d = helper_perf_data()
     if d is None:
         return
     if d.get("manager") == "RUNNING":
-        perf("PERF STOP")
+        helper_perf("PERF STOP")
     if d.get("manager") in ("RUNNING", "STOPPING"):
         core.wait_until(
-            lambda: True if (perf_data() or {}).get("manager") == "IDLE" else None,
+            lambda: True if (helper_perf_data() or {}).get("manager") == "IDLE" else None,
             cfg["perf_cleanup_timeout"], cfg["perf_cleanup_poll"])
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  LIVE MBPS POLLER  (runs in its own thread while a slot is active)
 # ═══════════════════════════════════════════════════════════════════════════════
-def _mbps_poll_thread():
+def _helper_mbps_poll_thread():
     while _mbps_poll_active:
-        d = perf_data()
+        d = helper_perf_data()
         if d and d.get("manager") == "RUNNING":
             mbps = d.get("current_mbps", 0.0)
             label = _current_slot_label
@@ -291,14 +290,14 @@ def _mbps_poll_thread():
         time.sleep(cfg["mbps_poll_interval"])
 
 
-def start_mbps_poll(label: str):
+def helper_start_mbps_poll(label: str):
     global _mbps_poll_active, _current_slot_label
     _current_slot_label = label
     _mbps_poll_active   = True
     threading.Thread(target=_mbps_poll_thread, daemon=True).start()
 
 
-def stop_mbps_poll():
+def helper_stop_mbps_poll():
     global _mbps_poll_active
     _mbps_poll_active = False
 
@@ -306,15 +305,15 @@ def stop_mbps_poll():
 # ═══════════════════════════════════════════════════════════════════════════════
 #  PAUSE / CONFIRM
 # ═══════════════════════════════════════════════════════════════════════════════
-def wait_if_paused() -> bool:
+def helper_wait_if_paused() -> bool:
     if paused and not stop_req:
-        set_state("PAUSED")
-        log("paused")
+        helper_set_state("PAUSED")
+        helper_log("paused")
         while paused and not stop_req:
             time.sleep(0.3)
         if not stop_req:
-            log("resumed")
-            set_state("RUNNING")
+            helper_log("resumed")
+            helper_set_state("RUNNING")
     return not stop_req
 
 
@@ -325,8 +324,8 @@ def confirm_gate(text: str) -> bool:
             confirm_answer  = None
             confirm_text    = text
             confirm_pending = True
-        set_state("WAIT_CONFIRM")
-        log("CONFIRM? " + text)
+        helper_set_state("WAIT_CONFIRM")
+        helper_log("CONFIRM? " + text)
         print("\n[CONFIRM] %s (y/n)\n%s> " % (text, APP), end="", flush=True)
 
         while confirm_answer is None and not stop_req:
@@ -337,18 +336,18 @@ def confirm_gate(text: str) -> bool:
         if stop_req:
             return False
         if ans == "y":
-            log("confirmed")
-            set_state("RUNNING")
+            helper_log("confirmed")
+            helper_set_state("RUNNING")
             return True
 
-        log("answer n -> paused (sweep resume to re-confirm)")
+        helper_log("answer n -> paused (sweep resume to re-confirm)")
         paused = True
-        if not wait_if_paused():
+        if not helper_wait_if_paused():
             return False
     return False
 
 
-def answer_confirm(ans: str) -> bool:
+def helper_answer_confirm(ans: str) -> bool:
     global confirm_answer
     with state_lock:
         if not confirm_pending:
@@ -361,75 +360,75 @@ def answer_confirm(ans: str) -> bool:
 #  RADIO STEP  (ssh_manager APPLY: channel + txpower, blocking, verified)
 # ═══════════════════════════════════════════════════════════════════════════════
 def apply_radio(radio, ch, pw) -> bool:
-    prog(step="radio apply")
+    helper_prog(step="radio apply")
     # APPLY blocks on the DUT: chan_switch, poll, txpower, settle, readback.
-    r = ssh("APPLY %s %s %s" % (radio, ch, pw), cfg["apply_timeout"])
+    r = helper_ssh("APPLY %s %s %s" % (radio, ch, pw), cfg["apply_timeout"])
     d = r.get("data") if isinstance(r.get("data"), dict) else {}
 
     if not r.get("ok"):
-        log("apply failed: %s" % r.get("message"))
+        helper_log("apply failed: %s" % r.get("message"))
         return False
 
     before = d.get("before") or {}
     after  = d.get("after") or {}
-    log("apply verified=%s before=ch%s/%s after=ch%s/%s" % (
+    helper_log("apply verified=%s before=ch%s/%s after=ch%s/%s" % (
         d.get("verified"),
         before.get("channel"), before.get("txpower"),
         after.get("channel"), after.get("txpower")))
-    prog(rssi="n/a")
+    helper_prog(rssi="n/a")
     return bool(d.get("verified"))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  PERF STEP  (custom_cmd only)
 # ═══════════════════════════════════════════════════════════════════════════════
-def wait_for_idle(timeout=10) -> bool:
+def helper_wait_for_idle(timeout=10) -> bool:
     return core.wait_until(
-        lambda: True if (perf_data() or {}).get("manager") == "IDLE" else None,
+        lambda: True if (helper_perf_data() or {}).get("manager") == "IDLE" else None,
         timeout, cfg["idle_poll_interval"]) is True
 
 
 def run_slot(prof, slot_num: int, fail_count: int) -> str:
     slot_duration = int(prof.get("slot_duration", DEFAULT_PROFILE["slot_duration"]))
-    prog(step="slot %d (fail streak %d)" % (slot_num, fail_count))
+    helper_prog(step="slot %d (fail streak %d)" % (slot_num, fail_count))
 
     label = "slot %d" % slot_num
 
     # Start capture first so we don't miss early traffic.
-    r_cap = cap("START")
-    if not cap_ok(r_cap):
-        log("slot %d: capture START failed: %s" % (slot_num, r_cap.get("message")))
+    r_cap = helper_cap("START")
+    if not helper_cap_ok(r_cap):
+        helper_log("slot %d: capture START failed: %s" % (slot_num, r_cap.get("message")))
         return "CAPTURE_FAILED"
 
-    start_mbps_poll(label)
+    helper_start_mbps_poll(label)
 
-    r_perf = perf("PERF START", timeout=slot_duration + cfg["perf_start_buffer"])
+    r_perf = helper_perf("PERF START", timeout=slot_duration + cfg["perf_start_buffer"])
     if not r_perf.get("ok"):
-        stop_mbps_poll()
-        log("slot %d: PERF START refused: %s" % (slot_num, r_perf.get("message")))
-        cap("STOP")
+        helper_stop_mbps_poll()
+        helper_log("slot %d: PERF START refused: %s" % (slot_num, r_perf.get("message")))
+        helper_cap("STOP")
         return "FAILED"
 
     # Wait until iperf_manager goes IDLE (test complete).
-    if not wait_for_idle(slot_duration + cfg["perf_idle_buffer"]):
-        stop_mbps_poll()
-        log("slot %d: iperf_manager did not go IDLE – forcing stop" % slot_num)
-        perf("PERF STOP")
-        wait_for_idle(cfg["perf_cleanup_timeout"])
-        cap("STOP")
+    if not helper_wait_for_idle(slot_duration + cfg["perf_idle_buffer"]):
+        helper_stop_mbps_poll()
+        helper_log("slot %d: iperf_manager did not go IDLE – forcing stop" % slot_num)
+        helper_perf("PERF STOP")
+        helper_wait_for_idle(cfg["perf_cleanup_timeout"])
+        helper_cap("STOP")
         return "FAILED"
 
-    stop_mbps_poll()
-    cap("STOP")
+    helper_stop_mbps_poll()
+    helper_cap("STOP")
 
     if stop_req:
         return "STOPPED"
 
-    d      = perf_data() or {}
+    d      = helper_perf_data() or {}
     result = d.get("last_result", {})
     state  = result.get("state", "ERROR")
     bps    = result.get("bps", 0.0)
-    log("slot %d: %s  bps=%.0f" % (slot_num, state, bps))
+    helper_log("slot %d: %s  bps=%.0f" % (slot_num, state, bps))
 
     return "SUCCESS" if state == "SUCCESS" else "FAILED"
 
@@ -440,15 +439,15 @@ def capture_phase(prof, acc: dict) -> str:
     # Push custom_cmd to iperf_manager once per combo.
     custom_cmd = prof.get("custom_cmd", "").strip()
     if custom_cmd:
-        r_cmd = perf("PERF SET CMD %s" % custom_cmd)
+        r_cmd = helper_perf("PERF SET CMD %s" % custom_cmd)
     else:
-        r_cmd = perf("PERF SET CMD CLEAR")
+        r_cmd = helper_perf("PERF SET CMD CLEAR")
     if not r_cmd.get("ok"):
         return "PERF_FAILED"
 
     # Send SESSION once per combo attempt (or every capture start if flag set).
     if not acc["session_sent"] or cfg["session_each_start"]:
-        if not cap_ok(cap("SESSION " + acc["session"])):
+        if not helper_cap_ok(helper_cap("SESSION " + acc["session"])):
             return "CAPTURE_FAILED"
         acc["session_sent"] = True
 
@@ -456,20 +455,20 @@ def capture_phase(prof, acc: dict) -> str:
     slot_num    = acc["slots_attempted"]
 
     while acc["good_slots"] < slots_needed:
-        if not wait_if_paused():
+        if not helper_wait_if_paused():
             return "STOPPED"
         if stop_req:
             return "STOPPED"
 
         if fail_streak > 0:
-            prog(step="retry wait (fail streak %d)" % fail_streak)
-            if not core.sleep_ticks(cfg["perf_retry_wait"], stopped):
+            helper_prog(step="retry wait (fail streak %d)" % fail_streak)
+            if not core.sleep_ticks(cfg["perf_retry_wait"], helper_stopped):
                 return "STOPPED"
-            perf_cleanup()
+            helper_perf_cleanup()
 
         slot_num += 1
         acc["slots_attempted"] = slot_num
-        prog(slots_good=acc["good_slots"], slots_total=slot_num,
+        helper_prog(slots_good=acc["good_slots"], slots_total=slot_num,
              fail_streak=fail_streak)
 
         outcome = run_slot(prof, slot_num, fail_streak)
@@ -481,15 +480,15 @@ def capture_phase(prof, acc: dict) -> str:
         if outcome == "SUCCESS":
             acc["good_slots"] += 1
             fail_streak = 0
-            log("good slot %d/%d" % (acc["good_slots"], slots_needed))
-            prog(slots_good=acc["good_slots"])
+            helper_log("good slot %d/%d" % (acc["good_slots"], slots_needed))
+            helper_prog(slots_good=acc["good_slots"])
         else:
             fail_streak        += 1
             acc["failed_slots"] += 1
-            log("failed slot (streak %d, total fails %d)" %
+            helper_log("failed slot (streak %d, total fails %d)" %
                 (fail_streak, acc["failed_slots"]))
             if fail_streak >= int(cfg["perf_retries"]):
-                log("fail streak %d reached perf_retries -> recommit" % fail_streak)
+                helper_log("fail streak %d reached perf_retries -> recommit" % fail_streak)
                 return "PERF_FAILED"
 
     return "DONE"
@@ -509,11 +508,11 @@ def run_combo(radio, ch, pw, prof, session: str, ctx: dict):
     outcome = "FAILED_RADIO"
 
     for attempt in range(1, int(cfg["recommit_attempts"]) + 1):
-        if not wait_if_paused():
+        if not helper_wait_if_paused():
             return "STOPPED", acc
-        log("%s ch=%s pw=%s attempt %d/%d" %
+        helper_log("%s ch=%s pw=%s attempt %d/%d" %
             (radio, ch, pw, attempt, cfg["recommit_attempts"]))
-        prog(attempt=attempt)
+        helper_prog(attempt=attempt)
 
         if not apply_radio(radio, ch, pw):
             if stop_req:
@@ -522,7 +521,7 @@ def run_combo(radio, ch, pw, prof, session: str, ctx: dict):
             continue
 
         if prof["confirm_channel_change"] and ctx["confirmed_ch"] != str(ch):
-            prog(step="waiting confirm")
+            helper_prog(step="waiting confirm")
             if not confirm_gate(
                     "Channel %s on %s applied. Ready to capture?" % (ch, radio)):
                 return "STOPPED", acc
@@ -541,7 +540,7 @@ def run_combo(radio, ch, pw, prof, session: str, ctx: dict):
         if r == "CAPTURE_FAILED":
             return "FAILED_CAPTURE", acc
         outcome = "FAILED_PERF"
-        log("perf_retries exhausted -> recommit (attempt %d)" % attempt)
+        helper_log("perf_retries exhausted -> recommit (attempt %d)" % attempt)
 
     return outcome, acc
 
@@ -549,7 +548,7 @@ def run_combo(radio, ch, pw, prof, session: str, ctx: dict):
 # ═══════════════════════════════════════════════════════════════════════════════
 #  ETA HELPERS
 # ═══════════════════════════════════════════════════════════════════════════════
-def _combo_eta_secs(prof) -> float:
+def _helper_combo_eta_secs(prof) -> float:
     slot_duration = int(prof.get("slot_duration", DEFAULT_PROFILE["slot_duration"]))
     slots_needed  = int(cfg.get("slots_needed", DEFAULTS["slots_needed"]))
     step_delay    = int(prof.get("step_delay",  DEFAULT_PROFILE["step_delay"]))
@@ -557,9 +556,9 @@ def _combo_eta_secs(prof) -> float:
     return 10.0 + slots_needed * slot_duration + step_delay
 
 
-def _show_combos_table(prof, name: str = ""):
+def _helper_show_combos_table(prof, name: str = ""):
     combos = [(c, p) for c in prof["channels"] for p in prof["powers"]]
-    eta_each = _combo_eta_secs(prof)
+    eta_each = _helper_combo_eta_secs(prof)
     total    = eta_each * len(combos)
 
     header = "Profile: %s" % name if name else "Combos"
@@ -570,8 +569,8 @@ def _show_combos_table(prof, name: str = ""):
         print("%-6d  %-8s  %-8s" % (i, ch, pw))
     print("─" * 26)
     print("Total combos : %d" % len(combos))
-    print("ETA per combo: %s (approx)" % _fmt_eta(eta_each))
-    print("Total ETA    : %s (approx)\n" % _fmt_eta(total))
+    print("ETA per combo: %s (approx)" % _helper_fmt_eta(eta_each))
+    print("Total ETA    : %s (approx)\n" % _helper_fmt_eta(total))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -582,9 +581,9 @@ def sweep_thread(name: str, prof: dict, start_from: int = 1, db_name: str = ""):
 
     combos    = [(c, p) for c in prof["channels"] for p in prof["powers"]]
     ctx       = {"confirmed_ch": None}
-    eta_each  = _combo_eta_secs(prof)
+    eta_each  = _helper_combo_eta_secs(prof)
 
-    log("=== SWEEP START profile=%s db=%s combos=%d start_from=%d ===" %
+    helper_log("=== SWEEP START profile=%s db=%s combos=%d start_from=%d ===" %
         (name, db_name, len(combos), start_from))
 
     with state_lock:
@@ -592,28 +591,28 @@ def sweep_thread(name: str, prof: dict, start_from: int = 1, db_name: str = ""):
         progress.clear()
         progress.update({"profile": name, "db_name": db_name,
                          "total": len(combos),
-                         "index": 0, "started": now_str(), "finished": None})
-    set_state("RUNNING")
+                         "index": 0, "started": helper_now_str(), "finished": None})
+    helper_set_state("RUNNING")
 
     for i, (ch, pw) in enumerate(combos, 1):
         if i < start_from:
             continue
-        if not wait_if_paused():
+        if not helper_wait_if_paused():
             break
 
         combos_remaining = len(combos) - i + 1
         total_rem        = combos_remaining * eta_each
         print("\n[combo %d/%d]  ch=%s  tx=%s  ETA remaining: %s" %
-              (i, len(combos), ch, pw, _fmt_eta(total_rem)), flush=True)
+              (i, len(combos), ch, pw, _helper_fmt_eta(total_rem)), flush=True)
 
         # Session name: prefix_ch<n>_pwr<n>_   (trailing underscore is the
         # separator that capture_manager prepends to the region name when
         # storing rows, giving e.g. ch6_pwr19_Burst_Power as the logical key)
         session = "%s_ch%s_pwr%s_" % (prof["session_prefix"], ch, pw)
-        prog(index=i, radio=prof["radio"], channel=ch, txpower=pw,
+        helper_prog(index=i, radio=prof["radio"], channel=ch, txpower=pw,
              session=session, slots_good=0, slots_total=0,
              fail_streak=0, step="starting")
-        log("--- combo %d/%d %s ch=%s pw=%s session=%s" %
+        helper_log("--- combo %d/%d %s ch=%s pw=%s session=%s" %
             (i, len(combos), prof["radio"], ch, pw, session))
 
         t0           = time.time()
@@ -636,22 +635,22 @@ def sweep_thread(name: str, prof: dict, start_from: int = 1, db_name: str = ""):
 
         combos_remaining = len(combos) - i
         total_rem        = combos_remaining * eta_each
-        log("RESULT combo=%d outcome=%s elapsed=%.0fs  remaining ETA: %s" %
-            (i, outcome, elapsed, _fmt_eta(total_rem)))
+        helper_log("RESULT combo=%d outcome=%s elapsed=%.0fs  remaining ETA: %s" %
+            (i, outcome, elapsed, _helper_fmt_eta(total_rem)))
         print("[combo %d/%d]  outcome=%s  elapsed=%ss  → remaining ETA: %s" %
-              (i, len(combos), outcome, elapsed, _fmt_eta(total_rem)), flush=True)
+              (i, len(combos), outcome, elapsed, _helper_fmt_eta(total_rem)), flush=True)
 
         if outcome == "STOPPED":
             break
         if i < len(combos) and int(prof.get("step_delay",
                                             DEFAULT_PROFILE["step_delay"])) > 0:
-            prog(step="step delay")
+            helper_prog(step="step delay")
             if not core.sleep_ticks(
-                    int(prof["step_delay"]), stopped, is_paused):
+                    int(prof["step_delay"]), helper_stopped, helper_is_paused):
                 break
 
     # Clear the custom_cmd from iperf_manager when done
-    perf("PERF SET CMD CLEAR", quiet=True)
+    helper_perf("PERF SET CMD CLEAR", quiet=True)
 
     final = "STOPPED" if stop_req else "DONE"
     with state_lock:
@@ -660,11 +659,11 @@ def sweep_thread(name: str, prof: dict, start_from: int = 1, db_name: str = ""):
         summary = {
             "profile":  name,
             "finished": final,
-            "at":       now_str(),
+            "at":       helper_now_str(),
             "results":  list(results),
         }
 
-    log("=== SWEEP %s profile=%s ===" % (final, name))
+    helper_log("=== SWEEP %s profile=%s ===" % (final, name))
 
     # ── save lastrun as TOML, next to the run log (no test name) ────────────
     ts      = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -675,15 +674,15 @@ def sweep_thread(name: str, prof: dict, start_from: int = 1, db_name: str = ""):
         "profile":  name,
         "db_name":  db_name,
         "finished": final,
-        "at":       now_str(),
+        "at":       helper_now_str(),
     }
     for idx, rec in enumerate(summary["results"], 1):
         toml_data["result_%d" % idx] = rec
     core.save_toml_file(lr_path, toml_data)
-    log("lastrun saved → %s" % lr_path)
+    helper_log("lastrun saved → %s" % lr_path)
     print("Lastrun saved: %s" % lr_path, flush=True)
 
-    set_state("IDLE")
+    helper_set_state("IDLE")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -696,7 +695,7 @@ def load_profiles_local() -> dict:
        not data["profiles"]:
         data = {"active": "default",
                 "profiles": {"default": copy.deepcopy(DEFAULT_PROFILE)}}
-        log("profiles.toml missing/invalid – created default")
+        helper_log("profiles.toml missing/invalid – created default")
     for p in data["profiles"].values():
         for k, v in DEFAULT_PROFILE.items():
             p.setdefault(k, copy.deepcopy(v))
@@ -712,7 +711,7 @@ def save_profiles_local():
 # ═══════════════════════════════════════════════════════════════════════════════
 #  PROFILE VALUE PARSING
 # ═══════════════════════════════════════════════════════════════════════════════
-def to_bool(v: str):
+def helper_to_bool(v: str):
     v = v.lower()
     if v in ("on", "true", "1", "yes"):
         return True, None
@@ -721,7 +720,7 @@ def to_bool(v: str):
     return None, "must be on/off"
 
 
-def parse_profile_value(param: str, raw: list):
+def helper_parse_profile_value(param: str, raw: list):
     joined = " ".join(raw)
     if param == "radio":
         if not re.fullmatch(r"radio\d+", joined.lower()):
@@ -757,7 +756,7 @@ def parse_profile_value(param: str, raw: list):
             return None, "prefix: letters, digits, _ and - only"
         return joined, None
     if param == "confirm":
-        return to_bool(joined) if len(raw) == 1 else (None, "must be on/off")
+        return helper_to_bool(joined) if len(raw) == 1 else (None, "must be on/off")
     if param == "custom_cmd":
         if not raw or (len(raw) == 1 and raw[0].upper() == "CLEAR"):
             return "", None
@@ -777,7 +776,7 @@ def check_nodes(radio=None) -> tuple:
         radio = profiles["profiles"][profiles["active"]]["radio"]
     nodes = {}
 
-    a = ssh("SSHALIVE", cfg["check_ssh_timeout"], quiet=True)
+    a = helper_ssh("SSHALIVE", cfg["check_ssh_timeout"], quiet=True)
     if not a.get("ok"):
         nodes["ssh_manager"] = {"ok": False, "detail": a.get("message")}
         nodes["dut_ssh"]     = {"ok": False, "detail": "unknown (ssh_manager down)"}
@@ -788,7 +787,7 @@ def check_nodes(radio=None) -> tuple:
         nodes["dut_ssh"] = {"ok": alive,
                             "detail": "alive" if alive else "ssh link down"}
         if alive:
-            s      = ssh("STATUS", cfg["check_status_timeout"], quiet=True)
+            s      = helper_ssh("STATUS", cfg["check_status_timeout"], quiet=True)
             radios = (s.get("data") or {}).get("radios") or {}
             found  = radio in radios
             nodes["radio"] = {
@@ -799,7 +798,7 @@ def check_nodes(radio=None) -> tuple:
         else:
             nodes["radio"] = {"ok": False, "detail": "unknown (DUT ssh down)"}
 
-    d = perf_data()
+    d = helper_perf_data()
     if d is None:
         nodes["iperf_manager"] = {"ok": False, "detail": "unreachable"}
     else:
@@ -807,7 +806,7 @@ def check_nodes(radio=None) -> tuple:
                                   "detail": d.get("manager")}
 
     # capture_manager speaks JSON so use tcp_command for a real health check.
-    r  = cap("STATUS", cfg["check_cap_timeout"], quiet=True)
+    r  = helper_cap("STATUS", cfg["check_cap_timeout"], quiet=True)
     up = r.get("ok", False)
     nodes["capture"] = {
         "ok":     up,
@@ -815,7 +814,7 @@ def check_nodes(radio=None) -> tuple:
                                 "ok" if up else r.get("message", "not answering"))}
 
     for n, v in nodes.items():
-        log("check %-14s %s  %s" %
+        helper_log("check %-14s %s  %s" %
             (n, "OK  " if v["ok"] else "FAIL", v["detail"]))
     return all(v["ok"] for v in nodes.values()), nodes
 
@@ -831,7 +830,7 @@ def cmd_check() -> dict:
 # ═══════════════════════════════════════════════════════════════════════════════
 #  COMMAND HANDLERS
 # ═══════════════════════════════════════════════════════════════════════════════
-def status_data() -> dict:
+def helper_status_data() -> dict:
     with state_lock:
         return {
             "state":           sweep_state,
@@ -844,7 +843,7 @@ def status_data() -> dict:
         }
 
 
-def check_db_name(db_name) -> str:
+def helper_check_db_name(db_name) -> str:
     if not db_name:
         return ("db name required: sweep start [profile] [from <n>] db <name>")
     if len(db_name) > 64:
@@ -889,7 +888,7 @@ def cmd_start(t: list) -> dict:
             return core.send_response(False, sweep_state,
                                       "a sweep is already active")
 
-    err = check_db_name(db_name)
+    err = helper_check_db_name(db_name)
     if err:
         return core.send_response(False, "ERROR", err)
 
@@ -920,8 +919,8 @@ def cmd_start(t: list) -> dict:
 
     # Point capture_manager at the requested database before anything runs.
     # Done after the node check so a failed start never changes the DB.
-    r = cap("DBNAME " + db_name)
-    if not cap_ok(r):
+    r = helper_cap("DBNAME " + db_name)
+    if not helper_cap_ok(r):
         return core.send_response(False, "ERROR",
             "capture_manager rejected DB name %r: %s" % (db_name, r.get("message")))
     got = (r.get("data") or {}).get("db_name")
@@ -929,7 +928,7 @@ def cmd_start(t: list) -> dict:
         return core.send_response(False, "ERROR",
             "capture_manager did not confirm DB name %r (got %r)" % (db_name, got))
     active_db = (r.get("data") or {}).get("active_db_name", db_name)
-    log("capture DB set: %s (active: %s)" % (db_name, active_db))
+    helper_log("capture DB set: %s (active: %s)" % (db_name, active_db))
 
     with state_lock:
         paused      = False
@@ -953,9 +952,9 @@ def cmd_stop() -> dict:
         if sweep_state == "IDLE":
             return core.send_response(False, "IDLE", "no sweep running")
         stop_req = True
-        set_state("STOPPING")
-    stop_mbps_poll()
-    log("STOP requested")
+        helper_set_state("STOPPING")
+    helper_stop_mbps_poll()
+    helper_log("STOP requested")
     return core.send_response(True, "STOPPING", "stop requested")
 
 
@@ -965,7 +964,7 @@ def cmd_pause() -> dict:
         if sweep_state == "IDLE":
             return core.send_response(False, "IDLE", "no sweep running")
         paused = True
-    log("PAUSE requested")
+    helper_log("PAUSE requested")
     return core.send_response(True, "PAUSING",
                               "pause requested; active slot finishes first")
 
@@ -976,7 +975,7 @@ def cmd_resume() -> dict:
         if not paused:
             return core.send_response(False, sweep_state, "not paused")
         paused = False
-    log("RESUME requested")
+    helper_log("RESUME requested")
     return core.send_response(True, "RUNNING", "resumed")
 
 
@@ -1005,7 +1004,7 @@ def cmd_set(t: list) -> dict:
         if val < 0:
             return core.send_response(False, "ERROR", "%s must be >= 0" % param)
     elif kind == "bool":
-        val, err = to_bool(raw)
+        val, err = helper_to_bool(raw)
         if err:
             return core.send_response(False, "ERROR", "%s %s" % (param, err))
     else:
@@ -1064,7 +1063,7 @@ def handle_profile(t: list) -> dict:
             return core.send_response(False, "ERROR",
                                       "usage: sweep profile set <param> <value>")
         param    = t[1].lower()
-        val, err = parse_profile_value(param, t[2:])
+        val, err = helper_parse_profile_value(param, t[2:])
         if err:
             return core.send_response(False, "ERROR", err)
         key = "confirm_channel_change" if param == "confirm" else param
@@ -1080,7 +1079,7 @@ def cmd_show_combos(t: list) -> dict:
     if name not in profiles["profiles"]:
         return core.send_response(False, "ERROR", "no such profile %r" % name)
     prof = profiles["profiles"][name]
-    _show_combos_table(prof, name)
+    _helper_show_combos_table(prof, name)
     combos = [(c, p) for c in prof["channels"] for p in prof["powers"]]
     return core.send_response(True, "OK", "combos shown",
                               {"profile": name, "count": len(combos)})
@@ -1098,12 +1097,12 @@ def handle_sweep(t: list) -> dict:
     if sub == "pause":   return cmd_pause()
     if sub == "resume":  return cmd_resume()
     if sub == "status":
-        return core.send_response(True, sweep_state, "status ok", status_data())
+        return core.send_response(True, sweep_state, "status ok", helper_status_data())
     if sub == "check":   return cmd_check()
     if sub == "confirm":
         if len(rest) != 1 or rest[0].lower() not in ("y", "yes", "n", "no"):
             return core.send_response(False, "ERROR", "usage: sweep confirm y|n")
-        if not answer_confirm(rest[0]):
+        if not helper_answer_confirm(rest[0]):
             return core.send_response(False, "ERROR", "no confirmation pending")
         return core.send_response(True, "OK", "answer recorded")
     if sub == "show":
@@ -1154,17 +1153,17 @@ def handle_manual(t: list) -> dict:
             "sweep is active; only read-only commands allowed (sweep stop first)")
 
     if target == "capture":
-        r = cap(cmd)
+        r = helper_cap(cmd)
         return core.send_response(r.get("ok"), r.get("status", "OK"),
                                   r.get("message", ""),
                                   {"target": target, "command": cmd, "reply": r})
 
     if target == "perf":
-        reply = perf(cmd, cfg["manual_timeout"])
+        reply = helper_perf(cmd, cfg["manual_timeout"])
     else:
         # APPLY blocks on the DUT, so give it the longer apply timeout.
         is_apply = bool(cmd.split()) and cmd.split()[0].upper() == "APPLY"
-        reply = ssh(cmd, cfg["apply_timeout"] if is_apply else cfg["manual_timeout"])
+        reply = helper_ssh(cmd, cfg["apply_timeout"] if is_apply else cfg["manual_timeout"])
     return core.send_response(reply.get("ok"), reply.get("status", "OK"),
                               reply.get("message", ""),
                               {"target": target, "command": cmd, "reply": reply})
@@ -1184,12 +1183,12 @@ def handle_command(line: str) -> dict:
         # the current slot/combo). Treat it exactly like "sweep pause":
         # the active slot finishes, then the sweep waits for a resume/
         # confirm instead of burning through remaining slots for nothing.
-        log("STOPME received from capture_manager -> pausing sweep")
+        helper_log("STOPME received from capture_manager -> pausing sweep")
         r = cmd_pause()
         if not r.get("ok"):
             # Not an error worth surfacing loudly — sweep may already be
             # IDLE/paused/stopping. Just report status back as-is.
-            log("STOPME: pause not applied (%s: %s)" %
+            helper_log("STOPME: pause not applied (%s: %s)" %
                 (r.get("status"), r.get("message")))
         return r
     return core.send_response(False, "ERROR",
@@ -1207,7 +1206,7 @@ def main():
     profiles = load_profiles_local()
     save_profiles_local()
     log_path = core.start_run_log(APP)
-    log("=== Mediator start Version=%s ===" % APP_Version)
+    helper_log("=== Mediator start Version=%s ===" % APP_Version)
 
     threading.Thread(
         target=core.run_tcp_server,
@@ -1230,24 +1229,24 @@ def main():
         if line.lower() in ("exit", "quit"):
             break
         if line.lower() in ("y", "yes", "n", "no") and confirm_pending:
-            answer_confirm(line)
+            helper_answer_confirm(line)
             continue
 
-        log("> " + line)
+        helper_log("> " + line)
         try:
             result = handle_command(line)
         except Exception as e:
             result = core.send_response(False, "ERROR", "internal error: %s" % e)
         # File: raw JSON (unchanged, wire-level record).
         # Console: simple two-column table, easier to scan than raw JSON.
-        log("< " + json.dumps(result),
+        helper_log("< " + json.dumps(result),
             console="<\n" + core.humanize_table(result))
 
     if sweep_state != "IDLE":
         cmd_stop()
         time.sleep(2)
     running = False
-    log("=== session end ===")
+    helper_log("=== session end ===")
 
 
 if __name__ == "__main__":
