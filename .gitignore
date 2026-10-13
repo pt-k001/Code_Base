@@ -12,3 +12,6 @@
 *.xlsx
 *.pyc
 __init__.cpython-132.pyc
+   *.pyc
+   __pycache__/
+   Service/Service_logs/
