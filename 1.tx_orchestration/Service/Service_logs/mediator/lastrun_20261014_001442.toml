@@ -1,0 +1,124 @@
+profile = "default"
+db_name = "LCAC_uci"
+finished = "STOPPED"
+at = "2026-10-14 00:14:42"
+
+[result_1]
+index = 1
+radio = "radio1"
+channel = 1
+txpower = 0
+session = "sweep_ch1_pwr0_"
+outcome = "FAILED_RADIO"
+good_slots = 0
+failed_slots = 0
+slots_attempted = 0
+elapsed_secs = 21.2
+
+[result_2]
+index = 2
+radio = "radio1"
+channel = 1
+txpower = 1
+session = "sweep_ch1_pwr1_"
+outcome = "FAILED_RADIO"
+good_slots = 0
+failed_slots = 0
+slots_attempted = 0
+elapsed_secs = 21.7
+
+[result_3]
+index = 3
+radio = "radio1"
+channel = 1
+txpower = 2
+session = "sweep_ch1_pwr2_"
+outcome = "FAILED_RADIO"
+good_slots = 0
+failed_slots = 0
+slots_attempted = 0
+elapsed_secs = 21.2
+
+[result_4]
+index = 4
+radio = "radio1"
+channel = 1
+txpower = 3
+session = "sweep_ch1_pwr3_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 282.7
+
+[result_5]
+index = 5
+radio = "radio1"
+channel = 1
+txpower = 4
+session = "sweep_ch1_pwr4_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_6]
+index = 6
+radio = "radio1"
+channel = 1
+txpower = 5
+session = "sweep_ch1_pwr5_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 49.7
+
+[result_7]
+index = 7
+radio = "radio1"
+channel = 1
+txpower = 6
+session = "sweep_ch1_pwr6_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 52.7
+
+[result_8]
+index = 8
+radio = "radio1"
+channel = 1
+txpower = 7
+session = "sweep_ch1_pwr7_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_9]
+index = 9
+radio = "radio1"
+channel = 1
+txpower = 8
+session = "sweep_ch1_pwr8_"
+outcome = "OK"
+good_slots = 2
+failed_slots = 0
+slots_attempted = 2
+elapsed_secs = 50.2
+
+[result_10]
+index = 10
+radio = "radio1"
+channel = 1
+txpower = 9
+session = "sweep_ch1_pwr9_"
+outcome = "STOPPED"
+good_slots = 0
+failed_slots = 0
+slots_attempted = 0
+elapsed_secs = 10.8

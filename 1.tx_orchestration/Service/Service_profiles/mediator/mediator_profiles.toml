@@ -1,4 +1,4 @@
 active = "default"
 
 [profiles]
-default = {radio = "radio0", channels = [1, 6, 11], powers = [10, 20], custom_cmd = "", session_prefix = "sweep", confirm_channel_change = true, step_delay = 2, slot_duration = 20}
+default = {radio = "radio1", channels = [1, 6, 11], powers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], custom_cmd = "-c 192.168.99.204 -R -P 10 -t 18", session_prefix = "sweep", confirm_channel_change = true, step_delay = 2, slot_duration = 20}

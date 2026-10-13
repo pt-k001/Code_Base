@@ -1,5 +1,5 @@
 {
- "script": "C:\\Users\\pyk\\Downloads\\Codes\\1.tx_orchestration\\managers\\capture_manager.py",
+ "script": "D:\\Remote_Lan_Share\\Code_Base\\Code_Base\\1.tx_orchestration\\managers\\mediator.py",
  "history": {
   "C:\\Users\\pyk\\Downloads\\Codes\\tx_orchestration\\managers\\jump_tunnel.py": [],
   "C:\\Users\\pyk\\Downloads\\Codes\\tx_orchestration\\managers\\ssh_manager.py": [
@@ -7,6 +7,49 @@
   ],
   "C:\\Users\\pyk\\Downloads\\Codes\\1.tx_orchestration\\managers\\capture_manager.py": [
    "sshalive"
+  ],
+  "D:\\Remote_Lan_Share\\Code_Base\\Code_Base\\1.tx_orchestration\\managers\\mediator.py": [
+   "sshalive",
+   "sweepcheck",
+   "sweep check",
+   "sweep profile show",
+   "sweep profile set radio1",
+   "sweep profile set radio radio1",
+   "sweep check",
+   "sweep profile set radio radio0",
+   "sweep check",
+   "sweep profile set radio radio0",
+   "sweep profile set radio radio1",
+   "sweep check",
+   "sweep start",
+   "sweep help",
+   "sweep start default from 0 db LCAC1",
+   "sweep start default from 1 db LCAC1",
+   "sweep profile show",
+   "sweep start default from 1 db LCAC1",
+   "sweep stop",
+   "sweep start default from 1 db LCAC1",
+   "y",
+   "sweep resume",
+   "sweep stop",
+   "manual perf start",
+   "sweep start default from 4 db LCAC1",
+   "y",
+   "sweep stop",
+   "sweep start default from 4 db LCAC1",
+   "y",
+   "sweep stop",
+   "sweep start default from 4 db LCAC1",
+   "y",
+   "sweep check",
+   "sweep start default from 0 db LCAC_uci",
+   "sweep start default from 1 db LCAC_uci",
+   "y",
+   "sweep stop",
+   "sweep profile show",
+   "sweep profile set custom_cmd -c 192.168.99.204 -R -P 10 -t 18",
+   "sweep start from 1 db LCAC_UCI",
+   "y"
   ]
  }
 }
