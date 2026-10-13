@@ -30,18 +30,33 @@ class CommandTimeoutError(TimeoutError):
 
 
 class HostKeyMismatchError(paramiko.SSHException):
-    pass
+    """The key presented for host:port differs from the one saved in known_hosts.
+
+    Typical benign cause: a different device (different MAC) now answers on the
+    same IP. The UI can ask the user and retry with replace_changed_key=True.
+    """
+
+    def __init__(self, message, host="", port=DEFAULT_PORT, fingerprint="", saved=()):
+        super().__init__(message)
+        self.host = host
+        self.port = port
+        self.fingerprint = fingerprint
+        self.saved = tuple(saved)
+
+
+class _RestrictedNegotiationError(Exception):
+    """Handshake failed while limited to the stored key types (internal)."""
 
 
 # ── validation ────────────────────────────────────────────────────────────────
-def validate_host(host):
+def helper_validate_host(host):
     cleaned = str(host).strip()
     if not _HOST_PATTERN.match(cleaned):
         raise ValueError("Invalid host/IP. Use only letters, digits, '.', '-' and ':'.")
     return cleaned
 
 
-def validate_port(value):
+def helper_validate_port(value):
     text = str(value).strip()
     if not text:
         return DEFAULT_PORT
@@ -54,7 +69,7 @@ def validate_port(value):
     return port
 
 
-def validate_username(user, max_length):
+def helper_validate_username(user, max_length):
     cleaned = str(user).strip()
     if not cleaned:
         raise ValueError("Username is required.")
@@ -65,7 +80,7 @@ def validate_username(user, max_length):
     return cleaned
 
 
-def validate_command(command, max_length):
+def helper_validate_command(command, max_length):
     cleaned = str(command).strip()
     if not cleaned:
         raise ValueError("Command is empty.")
@@ -76,7 +91,7 @@ def validate_command(command, max_length):
     return cleaned
 
 
-def parse_interval(value, limits):
+def helper_parse_interval(value, limits):
     low = int(limits["min_interval_s"])
     high = int(limits["max_interval_s"])
     try:
@@ -87,15 +102,15 @@ def parse_interval(value, limits):
 
 
 # ── record format (the dashboard parses exactly this) ─────────────────────────
-def now_timestamp():
+def helper_now_timestamp():
     return datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
 
-def _single_line(text):
+def _helper_single_line(text):
     return str(text).replace("\r", " ").replace("\n", " ")
 
 
-def sanitize_output(text):
+def helper_sanitize_output(text):
     cleaned = str(text).replace("\x00", "")
     safe_lines = []
     for line in cleaned.splitlines():
@@ -105,26 +120,26 @@ def sanitize_output(text):
     return "\n".join(safe_lines)
 
 
-def format_record(timestamp, host, command, output, tag=""):
-    tag_line = f"tag={_single_line(tag)}\n" if tag else ""
+def helper_format_record(timestamp, host, command, output, tag=""):
+    tag_line = f"tag={_helper_single_line(tag)}\n" if tag else ""
     return (
         "[record]\n"
         f"time={timestamp}\n"
-        f"host={_single_line(host)}\n"
-        f"cmd={_single_line(command)}\n"
+        f"host={_helper_single_line(host)}\n"
+        f"cmd={_helper_single_line(command)}\n"
         f"{tag_line}"
         "---\n"
-        f"{sanitize_output(output).rstrip()}\n"
+        f"{helper_sanitize_output(output).rstrip()}\n"
         "[/record]\n\n"
     )
 
 
-def key_fingerprint(key):
+def helper_key_fingerprint(key):
     digest = hashlib.sha256(key.asbytes()).digest()
     return "SHA256:" + base64.b64encode(digest).decode("ascii").rstrip("=")
 
 
-def _write_private_file(path, writer):
+def _helper_write_private_file(path, writer):
     temp_path = path + ".tmp"
     descriptor = os.open(temp_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     try:
@@ -141,7 +156,7 @@ def _write_private_file(path, writer):
         raise
 
 
-def open_folder(folder):
+def helper_open_folder(folder):
     if not os.path.isdir(folder):
         raise FileNotFoundError(f"Folder does not exist: {folder}")
     if sys.platform.startswith("win"):
@@ -179,7 +194,7 @@ class ProfileStore:
                 pass
 
     def _save(self):
-        _write_private_file(self._path, lambda handle: json.dump(self._data, handle, indent=2))
+        _helper_write_private_file(self._path, lambda handle: json.dump(self._data, handle, indent=2))
 
     def _clean_name(self, name):
         if not isinstance(name, str):
@@ -228,29 +243,50 @@ class KnownHostsStore:
                 self._keys = paramiko.HostKeys()
 
     @staticmethod
-    def entry_name(host, port):
+    def helper_entry_name(host, port):
         return host if port == DEFAULT_PORT else f"[{host}]:{port}"
 
     def known_key_types(self, host, port):
         with self._lock:
-            entry = self._keys.lookup(self.entry_name(host, port))
+            entry = self._keys.lookup(self.helper_entry_name(host, port))
             return [] if entry is None else list(entry.keys())
 
     def get_key(self, host, port, key_type):
         with self._lock:
-            entry = self._keys.lookup(self.entry_name(host, port))
+            entry = self._keys.lookup(self.helper_entry_name(host, port))
             return None if entry is None else entry.get(key_type)
+
+    def saved_fingerprints(self, host, port):
+        with self._lock:
+            entry = self._keys.lookup(self.helper_entry_name(host, port))
+            if entry is None:
+                return []
+            return [f"{name} {helper_key_fingerprint(key)}" for name, key in entry.items()]
 
     def add(self, host, port, key):
         with self._lock:
-            self._keys.add(self.entry_name(host, port), key.get_name(), key)
-            temp_path = self.path + ".tmp"
-            self._keys.save(temp_path)
+            self._keys.add(self.helper_entry_name(host, port), key.get_name(), key)
+            self._save_locked()
+
+    def replace(self, host, port, key):
+        """Drop every saved key of host:port and trust `key` instead."""
+        name = self.helper_entry_name(host, port)
+        with self._lock:
             try:
-                os.chmod(temp_path, 0o600)
-            except OSError:
+                del self._keys[name]
+            except KeyError:
                 pass
-            os.replace(temp_path, self.path)
+            self._keys.add(name, key.get_name(), key)
+            self._save_locked()
+
+    def _save_locked(self):
+        temp_path = self.path + ".tmp"
+        self._keys.save(temp_path)
+        try:
+            os.chmod(temp_path, 0o600)
+        except OSError:
+            pass
+        os.replace(temp_path, self.path)
 
 
 # ── SSH ───────────────────────────────────────────────────────────────────────
@@ -274,14 +310,16 @@ class SSHManager:
 
         self.last_fingerprint = ""
         self.host_key_was_new = False
+        self.host_key_was_replaced = False
 
-    def connect(self, host, port, user, password, key_path=None):
-        clean_host = validate_host(host)
-        clean_port = validate_port(port)
-        clean_user = validate_username(user, self._max_username)
+    def connect(self, host, port, user, password, key_path=None, replace_changed_key=False):
+        clean_host = helper_validate_host(host)
+        clean_port = helper_validate_port(port)
+        clean_user = helper_validate_username(user, self._max_username)
 
         with self._connect_lock:
-            transport = self._open_transport(clean_host, clean_port, clean_user, password, key_path)
+            transport = self._open_transport(clean_host, clean_port, clean_user, password, key_path,
+                                             replace_changed_key)
             self._install_transport(transport)
             with self._lock:
                 self._host = clean_host
@@ -290,7 +328,7 @@ class SSHManager:
                 self._password = password
                 self._key_path = key_path
 
-    def reconnect(self):
+    def reconnect(self, replace_changed_key=False):
         with self._connect_lock:
             with self._lock:
                 host, port, user = self._host, self._port, self._user
@@ -301,7 +339,8 @@ class SSHManager:
 
             self._close_current_transport()
             time.sleep(float(self._ssh_cfg["reconnect_pause_s"]))
-            self._install_transport(self._open_transport(host, port, user, password, key_path))
+            self._install_transport(self._open_transport(host, port, user, password, key_path,
+                                                         replace_changed_key))
 
     def disconnect(self):
         self._close_current_transport()
@@ -309,15 +348,15 @@ class SSHManager:
     def _close_current_transport(self):
         with self._lock:
             old_transport, self._transport = self._transport, None
-        self._safe_close(old_transport)
+        self._helper_safe_close(old_transport)
 
     def _install_transport(self, new_transport):
         with self._lock:
             old_transport, self._transport = self._transport, new_transport
-        self._safe_close(old_transport)
+        self._helper_safe_close(old_transport)
 
     @staticmethod
-    def _safe_close(transport):
+    def _helper_safe_close(transport):
         if transport is None:
             return
         try:
@@ -325,7 +364,21 @@ class SSHManager:
         except Exception:
             pass
 
-    def _open_transport(self, host, port, user, password, key_path):
+    def _open_transport(self, host, port, user, password, key_path, replace_changed_key=False):
+        # Pin the handshake to the key types already saved for this address, so a
+        # downgrade to an unknown key type is refused. If the device now answering
+        # offers none of them (a different device on the same IP), the handshake
+        # fails; retry unrestricted so host-key verification reports the change
+        # (HostKeyMismatchError) instead of a cryptic negotiation error.
+        restrict = (not replace_changed_key) and bool(self._known_hosts.known_key_types(host, port))
+        if restrict:
+            try:
+                return self._connect_once(host, port, user, password, key_path, True, False)
+            except _RestrictedNegotiationError:
+                pass
+        return self._connect_once(host, port, user, password, key_path, False, replace_changed_key)
+
+    def _connect_once(self, host, port, user, password, key_path, restrict, replace_changed_key):
         timeout = int(self._ssh_cfg["connect_timeout"])
         sock = socket.create_connection((host, port), timeout=timeout)
         transport = None
@@ -334,9 +387,15 @@ class SSHManager:
             transport.banner_timeout = timeout
             transport.auth_timeout = timeout
 
-            self._restrict_key_types(transport, host, port)
-            transport.start_client(timeout=timeout)
-            self._verify_host_key(transport, host, port)
+            if restrict:
+                self._restrict_key_types(transport, host, port)
+            try:
+                transport.start_client(timeout=timeout)
+            except paramiko.SSHException:
+                if restrict:
+                    raise _RestrictedNegotiationError() from None
+                raise
+            self._verify_host_key(transport, host, port, replace_changed_key)
             self._authenticate(transport, user, password, key_path)
 
             if not transport.is_authenticated():
@@ -346,7 +405,7 @@ class SSHManager:
             return transport
         except Exception:
             if transport is not None:
-                self._safe_close(transport)
+                self._helper_safe_close(transport)
             else:
                 sock.close()
             raise
@@ -360,24 +419,30 @@ class SSHManager:
         if allowed:
             options.key_types = allowed
 
-    def _verify_host_key(self, transport, host, port):
+    def _verify_host_key(self, transport, host, port, replace_changed_key=False):
         remote_key = transport.get_remote_server_key()
-        fingerprint = key_fingerprint(remote_key)
+        fingerprint = helper_key_fingerprint(remote_key)
         stored_key = self._known_hosts.get_key(host, port, remote_key.get_name())
         host_is_known = bool(self._known_hosts.known_key_types(host, port))
 
         self.host_key_was_new = False
+        self.host_key_was_replaced = False
 
         if stored_key is None and not host_is_known:
             self._known_hosts.add(host, port, remote_key)
             self.host_key_was_new = True
         elif stored_key is None or stored_key.asbytes() != remote_key.asbytes():
-            raise HostKeyMismatchError(
-                f"HOST KEY MISMATCH for {host}:{port}.\n"
-                f"Presented: {fingerprint}\n"
-                "This could be a man-in-the-middle attack. If the server was "
-                f"legitimately reinstalled, remove its entry from:\n{self._known_hosts.path}"
-            )
+            if not replace_changed_key:
+                raise HostKeyMismatchError(
+                    f"HOST KEY CHANGED for {host}:{port}.\n"
+                    f"Presented: {fingerprint}\n"
+                    "A different device may now be using this address, or the server was "
+                    "reinstalled. It could also be a man-in-the-middle attack.\n"
+                    f"Saved keys are in:\n{self._known_hosts.path}",
+                    host=host, port=port, fingerprint=fingerprint,
+                    saved=self._known_hosts.saved_fingerprints(host, port))
+            self._known_hosts.replace(host, port, remote_key)
+            self.host_key_was_replaced = True
 
         self.last_fingerprint = fingerprint
 
@@ -385,12 +450,12 @@ class SSHManager:
         if key_path:
             if not os.path.isfile(key_path):
                 raise FileNotFoundError(f"SSH key file not found: {key_path}")
-            transport.auth_publickey(user, self._load_private_key(key_path, password))
+            transport.auth_publickey(user, self._helper_load_private_key(key_path, password))
             return
         transport.auth_password(user, password)
 
     @staticmethod
-    def _load_private_key(key_path, passphrase):
+    def _helper_load_private_key(key_path, passphrase):
         key_classes = [getattr(paramiko, name) for name in ("RSAKey", "Ed25519Key", "ECDSAKey")
                        if hasattr(paramiko, name)]
         for key_class in key_classes:
@@ -405,7 +470,7 @@ class SSHManager:
         raise ValueError(f"Cannot load private key: {key_path}")
 
     def execute(self, command):
-        clean_command = validate_command(command, self._max_command)
+        clean_command = helper_validate_command(command, self._max_command)
         timeout = int(self._ssh_cfg["command_timeout"])
 
         with self._exec_lock:
@@ -422,7 +487,7 @@ class SSHManager:
                 channel.close()
 
     @staticmethod
-    def _append_limited(buffer, chunk, limit):
+    def _helper_append_limited(buffer, chunk, limit):
         room = limit - len(buffer)
         if room <= 0:
             return True
@@ -446,11 +511,11 @@ class SSHManager:
                 raise CommandTimeoutError(f"Command timed out after {timeout} seconds.")
 
             if channel.recv_ready():
-                truncated |= self._append_limited(stdout_buffer, channel.recv(chunk_size), limit)
+                truncated |= self._helper_append_limited(stdout_buffer, channel.recv(chunk_size), limit)
                 continue
 
             if channel.recv_stderr_ready():
-                truncated |= self._append_limited(
+                truncated |= self._helper_append_limited(
                     stderr_buffer, channel.recv_stderr(chunk_size), limit)
                 continue
 
@@ -497,7 +562,7 @@ class Logger:
         self._closed = False
 
     def write(self, command, output, tag=""):
-        block = format_record(now_timestamp(), self._host, command, output, tag)
+        block = helper_format_record(helper_now_timestamp(), self._host, command, output, tag)
         with self._lock:
             if self._closed:
                 return block
@@ -534,7 +599,7 @@ class CommandRunner(threading.Thread):
 
     def _run_cycle(self):
         try:
-            combined = run_command(self.ssh, self.command)
+            combined = helper_run_command(self.ssh, self.command)
         except Exception as exc:
             combined = f"[ERROR] {exc}"
             self.event_queue.put(("error", str(exc)))
@@ -554,14 +619,14 @@ class CommandRunner(threading.Thread):
         self._stop_event.set()
 
 
-def run_command(ssh, command):
+def helper_run_command(ssh, command):
     stdout, stderr = ssh.execute(command)
     if stderr.strip():
         return stdout + "\n[stderr]\n" + stderr
     return stdout
 
 
-def tail_read_lines(filepath, line_count, chunk_bytes):
+def helper_tail_read_lines(filepath, line_count, chunk_bytes):
     if line_count <= 0:
         return [], 0
 

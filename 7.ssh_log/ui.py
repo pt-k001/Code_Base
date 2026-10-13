@@ -12,20 +12,21 @@ from core import core
 from core.ssh_core import (
     DEFAULT_PORT,
     CommandRunner,
+    HostKeyMismatchError,
     KnownHostsStore,
     Logger,
     ProfileStore,
     SSHManager,
-    format_record,
-    now_timestamp,
-    open_folder,
-    parse_interval,
-    run_command,
-    tail_read_lines,
-    validate_command,
-    validate_host,
-    validate_port,
-    validate_username,
+    helper_format_record,
+    helper_now_timestamp,
+    helper_open_folder,
+    helper_parse_interval,
+    helper_run_command,
+    helper_tail_read_lines,
+    helper_validate_command,
+    helper_validate_host,
+    helper_validate_port,
+    helper_validate_username,
 )
 
 
@@ -119,7 +120,7 @@ class CommandRow(tk.Frame):
     def from_dict(self, data):
         self._cmd_var.set(str(data.get("cmd", "")))
 
-        interval = parse_interval(data.get("interval"), self._limits)
+        interval = helper_parse_interval(data.get("interval"), self._limits)
         self._interval_var.set(str(interval))
 
         tag = str(data.get("tag", "")).strip()
@@ -139,7 +140,7 @@ class CommandRow(tk.Frame):
 
     @property
     def interval(self):
-        return parse_interval(self._interval_var.get(), self._limits)
+        return helper_parse_interval(self._interval_var.get(), self._limits)
 
     @property
     def tag(self):
@@ -238,6 +239,7 @@ class ConnectionPane(tk.Frame):
         self._tab_number = tab_number
         self._profiles = profiles
         self._tab_label = tab_label_var
+        self._scale = core.helper_dpi_scale(self)
 
         self._ssh = SSHManager(known_hosts, cfg)
         self._logger = None
@@ -265,6 +267,10 @@ class ConnectionPane(tk.Frame):
         self._build_ui()
         self._refresh_profile_list()
         self._poll_event_queue()
+
+    def _px(self, value):
+        """Scale a hard-coded pixel size to the current display DPI."""
+        return core.helper_scale_px(value, self._scale)
 
     # ── Thread -> UI hand-off ─────────────────────────────────────────────────
     def _post(self, function, *arguments):
@@ -330,15 +336,15 @@ class ConnectionPane(tk.Frame):
         self._stats.grid(row=1, column=0, sticky="ew", padx=4, pady=2)
 
         # Paned layout
-        paned = tk.PanedWindow(self, orient="horizontal", sashwidth=5,
+        paned = tk.PanedWindow(self, orient="horizontal", sashwidth=self._px(5),
                                sashrelief="raised")
         paned.grid(row=2, column=0, sticky="nsew", padx=4, pady=2)
 
         left = self._build_left(paned)
         right = self._build_right(paned)
-        paned.add(left, minsize=340)
-        paned.add(right, minsize=460)
-        paned.paneconfigure(left, width=460)
+        paned.add(left, minsize=self._px(340))
+        paned.add(right, minsize=self._px(460))
+        paned.paneconfigure(left, width=self._px(460))
 
     def _section_label(self, parent, text):
         frame = tk.Frame(parent)
@@ -348,7 +354,7 @@ class ConnectionPane(tk.Frame):
                          anchor="w")
         label.pack(side="left")
 
-        rule = tk.Frame(frame, relief="groove", bd=1, height=2)
+        rule = tk.Frame(frame, relief="groove", bd=1, height=self._px(2))
         rule.pack(side="left", fill="x", expand=True, padx=(4, 0), pady=5)
 
     # ── Left panel ────────────────────────────────────────────────────────────
@@ -514,10 +520,10 @@ class ConnectionPane(tk.Frame):
         grid.pack(fill="x", padx=6)
         grid.columnconfigure(1, weight=1)
 
-        self._host_var = self._make_field(grid, 0, "Host/IP")
-        self._port_var = self._make_field(grid, 1, "Port", default=str(DEFAULT_PORT))
-        self._user_var = self._make_field(grid, 2, "User", default="root")
-        self._pass_var = self._make_field(grid, 3, "Password", show="*")
+        self._host_var = self._helper_make_field(grid, 0, "Host/IP")
+        self._port_var = self._helper_make_field(grid, 1, "Port", default=str(DEFAULT_PORT))
+        self._user_var = self._helper_make_field(grid, 2, "User", default="root")
+        self._pass_var = self._helper_make_field(grid, 3, "Password", show="*")
 
         key_label = tk.Label(grid, text="SSH Key", anchor="e", width=10)
         key_label.grid(row=4, column=0, sticky="e", pady=2, padx=(0, 4))
@@ -548,7 +554,7 @@ class ConnectionPane(tk.Frame):
         disconnect_button.pack(side="left")
 
     @staticmethod
-    def _make_field(grid, row, label, show="", default=""):
+    def _helper_make_field(grid, row, label, show="", default=""):
         caption = tk.Label(grid, text=label, anchor="e", width=10)
         caption.grid(row=row, column=0, sticky="e", pady=2, padx=(0, 4))
 
@@ -559,7 +565,7 @@ class ConnectionPane(tk.Frame):
 
     def _remember(self, key, value):
         self._cfg["paths"][key] = value
-        core.remember_path(key, value)
+        core.helper_remember_path(key, value)
 
     def _browse_key(self):
         path = filedialog.askopenfilename(
@@ -567,7 +573,7 @@ class ConnectionPane(tk.Frame):
             filetypes=[("Key files", "id_rsa id_ed25519 *.pem *.key *"),
                        ("All files", "*.*")],
             parent=self.winfo_toplevel(),
-            **core.dialog_start(self._cfg["paths"]["key_file"]))
+            **core.helper_dialog_start(self._cfg["paths"]["key_file"]))
         if path:
             self._key_var.set(path)
             self._remember("key_file", path)
@@ -612,7 +618,7 @@ class ConnectionPane(tk.Frame):
         container = tk.Frame(parent)
         container.pack(fill="x", padx=6)
 
-        self._rows_canvas = tk.Canvas(container, height=240, bd=1, relief="sunken")
+        self._rows_canvas = tk.Canvas(container, height=self._px(240), bd=1, relief="sunken")
         scrollbar = tk.Scrollbar(container, orient="vertical",
                                  command=self._rows_canvas.yview)
         self._rows_frame = tk.Frame(self._rows_canvas)
@@ -676,7 +682,7 @@ class ConnectionPane(tk.Frame):
             if not row.enabled or not row.command:
                 continue
             try:
-                validate_command(row.command, self._limits["max_command"])
+                helper_validate_command(row.command, self._limits["max_command"])
             except ValueError as exc:
                 messagebox.showwarning("Invalid Command", str(exc),
                                        parent=self.winfo_toplevel())
@@ -739,7 +745,7 @@ class ConnectionPane(tk.Frame):
         clear_button = tk.Button(toolbar, text="Clear", command=self._clear_log)
         clear_button.pack(side="right", padx=(0, 4))
 
-        divider = tk.Frame(outer, relief="groove", bd=1, height=2)
+        divider = tk.Frame(outer, relief="groove", bd=1, height=self._px(2))
         divider.grid(row=1, column=0, sticky="ew", padx=6)
 
         filter_bar = tk.Frame(outer)
@@ -790,9 +796,9 @@ class ConnectionPane(tk.Frame):
             return
 
         try:
-            host = validate_host(self._host_var.get())
-            port = validate_port(self._port_var.get())
-            user = validate_username(self._user_var.get(), self._limits["max_username"])
+            host = helper_validate_host(self._host_var.get())
+            port = helper_validate_port(self._port_var.get())
+            user = helper_validate_username(self._user_var.get(), self._limits["max_username"])
         except ValueError as exc:
             messagebox.showwarning("Invalid Input", str(exc),
                                    parent=self.winfo_toplevel())
@@ -804,17 +810,53 @@ class ConnectionPane(tk.Frame):
         self._cancel_reconnect()
         self._connecting = True
         self._status_lbl.config(text="Connecting…")
+
+        def attempt(replace_key):
+            self._ssh.connect(host, port, user, password, key_path=key_path,
+                              replace_changed_key=replace_key)
+
+        self._run_connect(attempt)
+
+    def _run_connect(self, attempt, replace_key=False):
+        """Run attempt(replace_key) off the UI thread and route the outcome."""
         token = self._session_token
 
         def worker():
             try:
-                self._ssh.connect(host, port, user, password, key_path=key_path)
+                attempt(replace_key)
+            except HostKeyMismatchError as exc:
+                self._post(self._handle_host_key_changed, token, attempt, exc)
+                return
             except Exception as exc:
                 self._post(self._handle_connect_failure, token, str(exc))
                 return
             self._post(self._handle_connect_success, token)
 
         threading.Thread(target=worker, daemon=True).start()
+
+    def _handle_host_key_changed(self, token, attempt, exc):
+        """Same IP, different device (or reinstall): let the user trust the new key."""
+        self._connecting = False
+        if token != self._session_token or self._closed:
+            return
+        self._status_lbl.config(text="Disconnected (host key changed)")
+        saved = "\n".join(exc.saved) or "(none)"
+        trust = messagebox.askyesno(
+            "Host Key Changed",
+            f"{exc.host}:{exc.port} presented a different SSH host key than the one saved.\n\n"
+            "This is expected if another device (different MAC) now uses this IP address, "
+            "or the device was reinstalled. It can also mean someone is intercepting the "
+            "connection.\n\n"
+            f"Saved:\n{saved}\n\nPresented:\n{exc.fingerprint}\n\n"
+            "Trust the new key and replace the saved one?",
+            icon="warning", default="no", parent=self.winfo_toplevel())
+        if not trust:
+            self._push_system(f"[SYSTEM] Host key for {exc.host}:{exc.port} changed; "
+                              "connection refused.\n\n")
+            return
+        self._connecting = True
+        self._status_lbl.config(text="Connecting…")
+        self._run_connect(attempt, replace_key=True)
 
     def _handle_connect_success(self, token):
         self._connecting = False
@@ -861,6 +903,10 @@ class ConnectionPane(tk.Frame):
         if self._ssh.host_key_was_new:
             self._push_system(
                 f"[SYSTEM] New host key trusted and saved for {host}: "
+                f"{self._ssh.last_fingerprint}\n\n")
+        elif self._ssh.host_key_was_replaced:
+            self._push_system(
+                f"[SYSTEM] Host key for {host} replaced with: "
                 f"{self._ssh.last_fingerprint}\n\n")
 
         if self._logging_active and self._logger:
@@ -927,6 +973,9 @@ class ConnectionPane(tk.Frame):
         def worker():
             try:
                 self._ssh.reconnect()
+            except HostKeyMismatchError as exc:
+                self._post(self._handle_reconnect_key_changed, token, exc)
+                return
             except Exception as exc:
                 self._post(self._handle_reconnect_failure, token, str(exc))
                 return
@@ -941,6 +990,18 @@ class ConnectionPane(tk.Frame):
         if not self._reconnecting:
             return   # superseded by a manual connect
         self._finish_connection(was_reconnect=True)
+
+    def _handle_reconnect_key_changed(self, token, exc):
+        if token != self._session_token or self._closed or not self._reconnecting:
+            return
+        # Retrying cannot fix a changed key, and it must never be trusted silently.
+        self._cancel_reconnect()
+        self._stop_watchdog()
+        self._recon_status_lbl.config(text="Auto-reconnect stopped: host key changed.")
+        self._push_system(f"[SYSTEM] Reconnect aborted: {exc.host}:{exc.port} "
+                          "presented a different host key.\n\n")
+        self._handle_host_key_changed(
+            token, lambda replace_key: self._ssh.reconnect(replace_changed_key=replace_key), exc)
 
     def _handle_reconnect_failure(self, token, message):
         if token != self._session_token or self._closed:
@@ -1066,7 +1127,7 @@ class ConnectionPane(tk.Frame):
 
         def tail_worker():
             try:
-                lines, file_size = tail_read_lines(
+                lines, file_size = helper_tail_read_lines(
                     filepath, int(self._viewer["preload_lines"]),
                     int(self._viewer["tail_chunk_bytes"]))
             except Exception as exc:
@@ -1111,7 +1172,7 @@ class ConnectionPane(tk.Frame):
             defaultextension=".log",
             filetypes=[("Log files", "*.log"), ("All files", "*.*")],
             parent=self.winfo_toplevel(),
-            initialdir=core.dialog_start(self._cfg["paths"]["log_file"]).get("initialdir"))
+            initialdir=core.helper_dialog_start(self._cfg["paths"]["log_file"]).get("initialdir"))
         if not filepath:
             return
 
@@ -1133,7 +1194,7 @@ class ConnectionPane(tk.Frame):
             title="Select Existing Log File to Continue",
             filetypes=[("Log files", "*.log"), ("All files", "*.*")],
             parent=self.winfo_toplevel(),
-            **core.dialog_start(self._cfg["paths"]["log_file"]))
+            **core.helper_dialog_start(self._cfg["paths"]["log_file"]))
         if not filepath:
             return
         self._remember("log_file", filepath)
@@ -1168,7 +1229,7 @@ class ConnectionPane(tk.Frame):
             return
 
         try:
-            validate_command(command, self._limits["max_command"])
+            helper_validate_command(command, self._limits["max_command"])
         except ValueError as exc:
             messagebox.showwarning("Invalid Command", str(exc),
                                    parent=self.winfo_toplevel())
@@ -1178,11 +1239,11 @@ class ConnectionPane(tk.Frame):
 
         def worker():
             try:
-                combined = run_command(self._ssh, command)
+                combined = helper_run_command(self._ssh, command)
             except Exception as exc:
                 combined = f"[ERROR] {exc}"
 
-            block = format_record(now_timestamp(), host, command, combined,
+            block = helper_format_record(helper_now_timestamp(), host, command, combined,
                                   tag="run-once")
             self._event_q.put(("record", block))
 
@@ -1284,7 +1345,7 @@ class ConnectionPane(tk.Frame):
             return
         folder = os.path.dirname(self._log_filepath)
         try:
-            open_folder(folder)
+            helper_open_folder(folder)
         except OSError as exc:
             messagebox.showerror("Open Folder Failed", str(exc),
                                  parent=self.winfo_toplevel())
@@ -1315,13 +1376,15 @@ class App(tk.Tk):
         super().__init__()
         gui = cfg["gui"]
         self.title(f'{gui["title"]} v{app_version}' if app_version else gui["title"])
-        self.geometry(gui["window_geometry"])
-        self.minsize(int(gui["min_width"]), int(gui["min_height"]))
+        scale = core.helper_dpi_scale(self)
+        self.geometry(core.helper_scale_geometry(gui["window_geometry"], scale))
+        self.minsize(core.helper_scale_px(gui["min_width"], scale),
+                     core.helper_scale_px(gui["min_height"], scale))
 
         self._cfg = cfg
-        self._profiles = ProfileStore(core.service_file("Service_profiles", "profiles.json"),
+        self._profiles = ProfileStore(core.helper_service_file("Service_profiles", "profiles.json"),
                                       cfg["limits"]["max_profile_name"])
-        self._known_hosts = KnownHostsStore(core.service_file("Service_profiles", "known_hosts"))
+        self._known_hosts = KnownHostsStore(core.helper_service_file("Service_profiles", "known_hosts"))
         self._panes = []
         self._next_tab_number = 1
 

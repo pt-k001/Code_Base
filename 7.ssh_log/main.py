@@ -24,24 +24,27 @@ from core import core
 
 CONFIG_FILE = "Service/Service_configs/ssh_log/ssh_log_config.toml"
 VERSION_FILE = "version.toml"
-APP_VERSION = core.read_version(core.resolve_path(VERSION_FILE))
+APP_VERSION = core.helper_read_version(core.helper_resolve_path(VERSION_FILE))
 
 
-def _fail(title: str, message: str) -> None:
-    tk.Tk().withdraw()
+def _helper_fail(title: str, message: str) -> None:
+    root = tk.Tk()
+    root.withdraw()
     messagebox.showerror(title, message)
+    root.destroy()
     raise SystemExit(1)
 
 
 def main() -> None:
+    core.helper_enable_dpi_awareness()   # must precede the first Tk window
     try:
-        cfg = core.load_config(CONFIG_FILE)
+        cfg = core.helper_load_config(CONFIG_FILE)
     except core.ConfigError as exc:
-        _fail("Configuration error", str(exc))
+        _helper_fail("Configuration error", str(exc))
     try:
         from ui import App
     except ImportError as exc:
-        _fail("Missing dependency", f"{exc}\n\nRun: pip install -r requirements.txt")
+        _helper_fail("Missing dependency", f"{exc}\n\nRun: pip install -r requirements.txt")
     App(cfg, APP_VERSION).mainloop()
 
 

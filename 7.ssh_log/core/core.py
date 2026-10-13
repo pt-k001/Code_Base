@@ -1,5 +1,7 @@
 import json
 import os
+import re
+import sys
 import tomllib
 
 APP_NAME = "ssh_log"
@@ -25,21 +27,21 @@ class ConfigError(RuntimeError):
     pass
 
 
-def _repo_root() -> str:
+def _helper_repo_root() -> str:
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def resolve_path(path: str) -> str:
-    return path if os.path.isabs(path) else os.path.join(_repo_root(), path)
+def helper_resolve_path(path: str) -> str:
+    return path if os.path.isabs(path) else os.path.join(_helper_repo_root(), path)
 
 
-def service_file(kind: str, name: str) -> str:
-    folder = os.path.join(_repo_root(), "Service", kind, APP_NAME)
+def helper_service_file(kind: str, name: str) -> str:
+    folder = os.path.join(_helper_repo_root(), "Service", kind, APP_NAME)
     os.makedirs(folder, exist_ok=True)
     return os.path.join(folder, name)
 
 
-def read_toml(path: str) -> dict:
+def helper_read_toml(path: str) -> dict:
     try:
         with open(path, "rb") as f:
             return tomllib.load(f)
@@ -49,18 +51,18 @@ def read_toml(path: str) -> dict:
         raise ConfigError(f"{path} is not valid TOML: {exc}") from None
 
 
-def read_version(path: str) -> str:
+def helper_read_version(path: str) -> str:
     try:
-        version = read_toml(path).get("version")
+        version = helper_read_toml(path).get("version")
     except ConfigError:
         return ""
     return str(version).strip() if version else ""
 
 
-def load_config(path: str) -> dict:
+def helper_load_config(path: str) -> dict:
     global _config_path
-    _config_path = resolve_path(path)
-    cfg = read_toml(_config_path)
+    _config_path = helper_resolve_path(path)
+    cfg = helper_read_toml(_config_path)
     for section, keys in REQUIRED_KEYS.items():
         table = cfg.get(section)
         if not isinstance(table, dict):
@@ -71,7 +73,7 @@ def load_config(path: str) -> dict:
     return cfg
 
 
-def remember_path(key: str, value: str) -> None:
+def helper_remember_path(key: str, value: str) -> None:
     if not _config_path or not value:
         return
     line = f"{key} = {json.dumps(value)}"
@@ -94,8 +96,54 @@ def remember_path(key: str, value: str) -> None:
         pass
 
 
-def dialog_start(path: str) -> dict:
+def helper_dialog_start(path: str) -> dict:
     folder = os.path.dirname(path) if path else ""
     if folder and os.path.isdir(folder):
         return {"initialdir": folder, "initialfile": os.path.basename(path)}
     return {}
+
+
+# ── DPI awareness / scaling ───────────────────────────────────────────────────
+def helper_enable_dpi_awareness() -> bool:
+    """Make the process DPI aware on Windows. Must run BEFORE the first Tk window.
+
+    System-DPI awareness is used on purpose: Tk does not handle WM_DPICHANGED,
+    so per-monitor awareness would leave widgets mis-sized after a window is
+    dragged to a monitor with a different scale factor.
+    """
+    if not sys.platform.startswith("win"):
+        return False
+    try:
+        import ctypes
+    except ImportError:
+        return False
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)      # Win 8.1+
+        return True
+    except (AttributeError, OSError):
+        pass
+    try:
+        return bool(ctypes.windll.user32.SetProcessDPIAware())   # Vista+
+    except (AttributeError, OSError):
+        return False
+
+
+def helper_dpi_scale(widget) -> float:
+    """Return the display scale factor (1.0 == 96 DPI). Never below 1.0."""
+    try:
+        return max(1.0, float(widget.winfo_fpixels("1i")) / 96.0)
+    except Exception:
+        return 1.0
+
+
+def helper_scale_px(value, scale) -> int:
+    return max(1, int(round(float(value) * float(scale))))
+
+
+def helper_scale_geometry(geometry: str, scale) -> str:
+    """Scale the WxH part of a Tk geometry string; keep any +x+y offset as is."""
+    match = re.match(r"^\s*(\d+)x(\d+)(.*)$", str(geometry))
+    if not match:
+        return str(geometry)
+    width, height, rest = match.groups()
+    return f"{helper_scale_px(width, scale)}x{helper_scale_px(height, scale)}{rest.strip()}"
