@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 mediator.py - headless orchestrator for channel x txpower sweeps.
 
@@ -60,21 +61,24 @@ Requirements:
     Python 3.11+. Needs core/core.py and running ssh_manager, iperf_manager
     and capture_manager instances (default ports 9000, 9001, 9002).
 """
-
-import copy
-import json
-import os
-import re
-import shlex
-import threading
-import time
-from datetime import datetime
-
 import sys
 from pathlib import Path
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import core.core as core  # noqa: E402
+
+try:
+    import copy
+    import json
+    import os
+    import re
+    import shlex
+    import threading
+    import time
+    from datetime import datetime
+
+    import core.core as core
+
+except ImportError as e:
+    sys.exit(f"[Fatal] Import failed : {e}")
 
 APP = "mediator"
 APP_Version = core.get_version()
@@ -93,7 +97,7 @@ DEFAULTS = {
     "perf_retry_wait":     5,
     "recommit_attempts":   2,
     "session_each_start":  False,
-    "tcp_host":            "127.0.0.1",
+    "tcp_host":            "0.0.0.0",
     "tcp_port":            9003,
     # peer command timeouts (seconds)
     "ssh_timeout":         10,
@@ -143,7 +147,7 @@ SETTABLE = {
 DEFAULT_PROFILE = {
     "radio":                  "radio0",
     "channels":               [1, 6, 11],
-    "powers":                 [10, 20],
+    "powers":                 [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23],
     "custom_cmd":             "",        # full iperf3 args, REQUIRED before start
     "session_prefix":         "sweep",
     "confirm_channel_change": True,
